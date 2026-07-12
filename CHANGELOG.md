@@ -2,6 +2,10 @@
 
 ## 1.1.0
 
+- **NOC design**: the dark theme is now a control-room terminal look —
+  blue-black ground, phosphor-green accent with a signal-cyan secondary,
+  hairline rules, tight radii, a faint scanline texture and glowing escalation
+  cards. Applies system-wide; the light theme stays as a calm twin.
 - **Settings redesign**: the settings page is now a two-pane layout — a grouped
   module list (Appearance / Dashboard / Data sources / Output / Account) on the
   left with per-module status hints, content on the right. Replaces the long

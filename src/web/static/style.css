@@ -5,7 +5,9 @@
    Zweck: Schlichtes, responsives Layout der compass-Web-UI.
    ----------------------------------------------------------------------------- */
 
-/* Palette nach UI/UX-Pro-Max-Empfehlung fuer Triage-Dashboards: "Inbox blue + priority red". */
+/* Palette: "NOC" — Kontrollraum-Terminal. Dunkel = blau-schwarzer Grund, Phosphor-
+   Gruen + Signal-Cyan (--accent2), Monospace-Daten, Hairlines. Hell bleibt als
+   ruhiger Zwilling erhalten. */
 :root {
   --bg: #f6f8fc;
   --card: #ffffff;
@@ -13,34 +15,37 @@
   --ink-soft: #334155;
   --muted: #64748b;
   --line: #e4ecfc;
-  --accent: #2563eb;
-  --danger: #dc2626;
-  --ok: #1e7e45;
+  --accent: #157567;
+  --accent2: #0d9488;
+  --danger: #c23b52;
+  --ok: #157567;
 }
 
-/* Dunkel-Modus: explizit gewaehlt ODER per System-Praeferenz (wenn nicht "hell" gesetzt). */
+/* Dunkel-Modus (NOC): explizit gewaehlt ODER per System-Praeferenz. */
 :root[data-theme="dark"] {
-  --bg: #0d1117;
-  --card: #161b22;
-  --ink: #e6edf3;
-  --ink-soft: #c9d1d9;
-  --muted: #8b949e;
-  --line: #30363d;
-  --accent: #4d8fd6;
-  --danger: #f85149;
-  --ok: #3fb950;
+  --bg: #06080b;
+  --card: #0c1218;
+  --ink: #cfdae5;
+  --ink-soft: #aab6c2;
+  --muted: #61707f;
+  --line: #1a232e;
+  --accent: #3fe07a;
+  --accent2: #4bc7f5;
+  --danger: #ff5470;
+  --ok: #3fe07a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d1117;
-    --card: #161b22;
-    --ink: #e6edf3;
-    --ink-soft: #c9d1d9;
-    --muted: #8b949e;
-    --line: #30363d;
-    --accent: #4d8fd6;
-    --danger: #f85149;
-    --ok: #3fb950;
+    --bg: #06080b;
+    --card: #0c1218;
+    --ink: #cfdae5;
+    --ink-soft: #aab6c2;
+    --muted: #61707f;
+    --line: #1a232e;
+    --accent: #3fe07a;
+    --accent2: #4bc7f5;
+    --danger: #ff5470;
+    --ok: #3fe07a;
   }
 }
 
@@ -55,14 +60,14 @@
 /* Dunkelmodus: hellere Akzent-Varianten fuer ausreichenden Kontrast auf dunklem Grund. */
 :root[data-theme="dark"][data-accent="blue"]   { --accent: #5b9be3; }
 :root[data-theme="dark"][data-accent="teal"]   { --accent: #2dd4bf; }
-:root[data-theme="dark"][data-accent="green"]  { --accent: #4ade80; }
+:root[data-theme="dark"][data-accent="green"]  { --accent: #3fe07a; }
 :root[data-theme="dark"][data-accent="purple"] { --accent: #a78bfa; }
 :root[data-theme="dark"][data-accent="orange"] { --accent: #fb923c; }
 :root[data-theme="dark"][data-accent="red"]    { --accent: #f87171; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"])[data-accent="blue"]   { --accent: #5b9be3; }
   :root:not([data-theme="light"])[data-accent="teal"]   { --accent: #2dd4bf; }
-  :root:not([data-theme="light"])[data-accent="green"]  { --accent: #4ade80; }
+  :root:not([data-theme="light"])[data-accent="green"]  { --accent: #3fe07a; }
   :root:not([data-theme="light"])[data-accent="purple"] { --accent: #a78bfa; }
   :root:not([data-theme="light"])[data-accent="orange"] { --accent: #fb923c; }
   :root:not([data-theme="light"])[data-accent="red"]    { --accent: #f87171; }
@@ -694,7 +699,7 @@ table.pick th, table.pick td { text-align: left; padding: .3rem .4rem; border-bo
 
 /* Arbeitszeit-Laufband (zweites Band unter dem News-Ticker).
    --wtc = einstellbare Akzentfarbe des Bands (Settings), Default Theme-Akzent. */
-.ticker-work { margin-top: -0.25rem; --wtc: var(--accent); }
+.ticker-work { margin-top: -0.25rem; --wtc: var(--accent2); }
 .tk-label-work { color: var(--wtc); }
 .ticker-work .tk-team { color: var(--wtc); }
 .tk-head .tk-team { color: var(--muted); letter-spacing: .08em; }
@@ -846,3 +851,25 @@ body.kiosk { min-height: 100vh; }
 body.kiosk main.kiosk-main { max-width: none; margin: 0; padding: .5rem 1rem 1.2rem; }
 body.kiosk .ticker { margin: 0 0 .6rem; border-radius: 0; border-left: 0; border-right: 0; }
 body.kiosk .ticker:first-child { border-top: 0; }
+
+/* --- NOC-Design: Terminal-Signaturen (nur Dunkelmodus) ----------------------- */
+/* Feine Scanline ueber dem Grund — sehr dezent, gibt der Datenwand Textur. */
+:root[data-theme="dark"] body {
+  background-image: repeating-linear-gradient(0deg, rgba(63,224,122,.015) 0 1px, transparent 1px 3px); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    background-image: repeating-linear-gradient(0deg, rgba(63,224,122,.015) 0 1px, transparent 1px 3px); }
+}
+/* Engere Radien (Terminal-Kante). */
+:root[data-theme="dark"] .item { border-radius: 4px; }
+:root[data-theme="dark"] .item.gpanel { border-radius: 5px; }
+/* Eskalationen glimmen. */
+:root[data-theme="dark"] .item.override {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 38%, transparent),
+              0 0 22px -8px color-mix(in srgb, var(--danger) 60%, transparent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .item.override {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 38%, transparent),
+                0 0 22px -8px color-mix(in srgb, var(--danger) 60%, transparent); }
+}
+/* HelpDesk-Ticker gruen, Mitarbeiter-Ticker cyan (Zweitakzent) — wie NOC-Vorlage. */
