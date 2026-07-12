@@ -421,7 +421,8 @@ button:active, .btn:active, .design-mode:active, .swatch:active { transform: sca
 .acc { display: inline-flex; align-items: center; gap: .5rem; }
 .acc .jid { color: var(--muted); font-size: .82rem; }
 .acc .state { font-size: .74rem; padding: .1rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
-.acc .state.on { color: var(--ok); border-color: var(--ok); }
+.acc .state.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 42%, var(--line));
+  background: color-mix(in srgb, var(--ok) 12%, transparent); }
 .acc .state.error { color: var(--danger); border-color: var(--danger); }
 .acc .state.connecting { color: var(--muted); }
 
@@ -566,11 +567,12 @@ table.pick th, table.pick td { text-align: left; padding: .3rem .4rem; border-bo
 .dash-wrap { display: flex; gap: .9rem; align-items: flex-start; }
 .dash-main { flex: 1; min-width: 0; }
 /* Optik wie die farbig gerahmten Kacheln: Akzent-Rahmen + weicher Schein. */
+/* Chatleiste im Kachel-Stil: ruhige Linie + Akzent-Kante links (wie die Item-Karten),
+   kein Rundum-Glow -- sonst leuchtet das Phosphor-Gruen als Kasten. */
 .chatbar { flex: none; width: 330px; position: sticky; top: .8rem;
   height: calc(100vh - 5.4rem); display: flex; flex-direction: column;
-  background: var(--card); border-radius: 12px;
-  border: 1.5px solid color-mix(in srgb, var(--accent) 55%, var(--line));
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 16%, transparent);
+  background: var(--card); border-radius: 8px;
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
   overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 
 .cb-head { display: flex; align-items: center; gap: .5rem; padding: .5rem .6rem;
@@ -863,13 +865,13 @@ body.kiosk .ticker:first-child { border-top: 0; }
 /* Engere Radien (Terminal-Kante). */
 :root[data-theme="dark"] .item { border-radius: 4px; }
 :root[data-theme="dark"] .item.gpanel { border-radius: 5px; }
-/* Eskalationen glimmen. */
+/* Eskalationen glimmen dezent (mehrere uebereinander sollen die Seite nicht rot fluten). */
 :root[data-theme="dark"] .item.override {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 38%, transparent),
-              0 0 22px -8px color-mix(in srgb, var(--danger) 60%, transparent); }
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent),
+              0 0 16px -10px color-mix(in srgb, var(--danger) 45%, transparent); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .item.override {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 38%, transparent),
-                0 0 22px -8px color-mix(in srgb, var(--danger) 60%, transparent); }
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent),
+                0 0 16px -10px color-mix(in srgb, var(--danger) 45%, transparent); }
 }
 /* HelpDesk-Ticker gruen, Mitarbeiter-Ticker cyan (Zweitakzent) — wie NOC-Vorlage. */

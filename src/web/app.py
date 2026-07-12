@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.2"
+APP_VERSION = "1.4.3"
 
 
 class NotAuthenticated(Exception):
