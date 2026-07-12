@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+- **Settings redesign**: the settings page is now a two-pane layout — a grouped
+  module list (Appearance / Dashboard / Data sources / Output / Account) on the
+  left with per-module status hints, content on the right. Replaces the long
+  accordion stack; the active module is remembered across saves.
+- **Kiosk mode for office displays**: a token-protected URL (`/kiosk/<token>`)
+  renders the dashboard read-only — tickers, Grafana panels, function tiles and
+  the NextUp list, without chat and without controls, with periodic reload. Since
+  the display has no input, its appearance (theme, accent, view, boxes per row,
+  max items, tickers on/off, refresh interval) is configured entirely server-side.
+
 ## 1.0.0 — Initial public release
 
 First public release of compass — the merger of

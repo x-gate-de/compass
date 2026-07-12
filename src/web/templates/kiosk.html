@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+{# Kiosk-Anzeige fuer Buero-Displays: read-only, ohne Chat, ohne Bedienung.
+   Aussehen kommt serverseitig ueber die data-Attribute (Display-Einstellungen). #}
+<html lang="de" data-kiosk="1"
+      data-theme="{{ k.theme }}" data-accent="{{ k.accent }}" data-view="{{ k.view }}"
+      data-lines="{{ k.lines }}" data-cols="{{ k.cols }}" data-density="comfortable"
+      data-r1="{{ k.r1 }}" data-r2="{{ k.r2 }}" data-r3="{{ k.r3 }}" data-rn="{{ k.rn }}"
+      data-max="{{ k.max }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>compass — Display</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ app_version }}">
+  <script src="/static/kiosk.js?v={{ app_version }}" data-refresh="{{ k.refresh }}" defer></script>
+</head>
+<body class="kiosk">
+{% import "_icons.html" as ico %}
+  {% if ticker %}
+  <div class="ticker" id="ticker" aria-label="News-Ticker">
+    <span class="tk-label">HelpDesk</span>
+    <div class="tk-viewport"><div class="tk-track" id="tk-track" data-speed="{{ ticker_speed or 90 }}">
+      {% for t in ticker %}
+      <span class="tk-item"><b class="tk-team">{{ t['team_name'] }}</b>
+        {{- ' ' }}{{ t['headline'] or 'sammle Daten …' }}
+        {%- if t['ticket_count'] is not none %} <span class="tk-count">({{ t['ticket_count'] }})</span>{% endif %}</span>
+      {% endfor %}
+    </div></div>
+  </div>
+  {% endif %}
+  {% if wt_segments %}
+  <div class="ticker ticker-work" id="wticker" aria-label="Arbeitszeit-Ticker"
+       {% if wt and wt.color %}style="--wtc: {{ wt.color }}"{% endif %}>
+    <span class="tk-label tk-label-work">Mitarbeiter</span>
+    <div class="tk-viewport"><div class="tk-track" id="wt-track" data-speed="{{ (wt.speed if wt else 90) or 90 }}">
+      {% for s in wt_segments %}
+      <span class="tk-item tk-{{ s.kind }}"><b class="tk-team">{{ s.label }}</b>
+        {%- if s.parts %} {% for pt in s.parts %}<span {% if pt.c %}style="color: {{ pt.c }}"{% endif %}>{{ pt.t }}</span>{% endfor %}
+        {%- elif s.text %} {{ s.text }}{% endif %}</span>
+      {% endfor %}
+    </div></div>
+  </div>
+  {% endif %}
+
+  <main class="kiosk-main">
+    <ul class="items">
+      {% for row in stream %}
+      {% if row.kind == 'block' %}
+      {% set b = row.b %}
+      {% set _gs = {'12':12,'9':9,'8':8,'6':6,'4':4,'3':3,'full':12,'half':6} %}
+      {% set gspan = _gs.get(b.width|string, 12) %}
+      <li class="item gpanel {{ 'gtile' if b.btype != 'grafana' }} tile-{{ b.btype }}" data-gspan="{{ gspan }}"
+          data-src="{{ b.btype }}"
+          style="grid-column: {{ '1 / -1' if gspan >= 12 else 'span ' ~ gspan }};{% if b.color %} --pcol: {{ b.color }};{% endif %}">
+        {% if b.btype == 'grafana' %}
+          {% if b.title %}<div class="gpanel-head">{{ b.title }}</div>{% endif %}
+          {% if b.mode == 'iframe' %}
+          <iframe class="gpanel-frame" src="{{ b.embed_url }}" style="height: {{ b.height }}px" loading="lazy" title="{{ b.title }}"></iframe>
+          {% else %}
+          <img class="gpanel-img" src="/grafana/panels/{{ b.id }}/img?w=1400&h={{ b.height }}" alt="{{ b.title }}" loading="lazy">
+          {% endif %}
+        {% elif b.btype == 'briefing' %}
+          <div class="meta"><span class="src">{{ ico.source_icon('briefing') }} {{ b.title or 'Morgen-Briefing' }}</span>
+            {% if b.data %}<span class="when">{{ b.data.updated_ts|dt }}</span>{% endif %}</div>
+          <div class="tile-body">
+            {% if b.data and b.data.text %}<ul class="tile-list">
+              {% for line in b.data.text.split('\n') if line.strip() %}<li>{{ line.strip().lstrip('-').strip() }}</li>{% endfor %}
+            </ul>{% else %}<p class="muted">—</p>{% endif %}
+          </div>
+        {% elif b.btype == 'team' %}
+          {% set d = b.data %}
+          <div class="meta"><span class="src">{{ ico.source_icon('team') }} {{ b.title or 'Team & Planung' }}</span>
+            {% if d.oncall %}<span class="sender">RB: {{ d.oncall|join(', ') }}</span>{% endif %}</div>
+          <div class="tile-body">
+            {% if d.oncall_gap %}<div class="tile-warn">⚠ Keine Rufbereitschaft in den naechsten 7 Tagen!</div>{% endif %}
+            <div class="tile-row"><span class="tile-k">Rufbereitschaft</span><span class="tile-v {{ 'tile-ok' if d.oncall }}">{{ d.oncall|join(', ') or '—' }}</span></div>
+            <div class="tile-row"><span class="tile-k">Jetzt aktiv</span><span class="tile-v">{{ d.active|join(', ') or '—' }}</span></div>
+            <div class="tile-row"><span class="tile-k">Heute abwesend</span><span class="tile-v">{{ d.absent|join(', ') or '—' }}</span></div>
+            <div class="tile-row"><span class="tile-k">Demnaechst weg</span><span class="tile-v">{{ d.upcoming|join(' · ') or '—' }}</span></div>
+          </div>
+        {% elif b.btype == 'ops' %}
+          {% set d = b.data %}
+          <div class="meta"><span class="src">{{ ico.source_icon('ops') }} {{ b.title or 'Betrieb & Monitoring' }}</span>
+            <span class="when">{{ d.hours }}h · {{ d.total }} Meldungen</span></div>
+          <div class="tile-body">
+            {% if d.top %}<table class="tile-table">{% for host, n in d.top %}<tr><td>{{ host }}</td><td class="tile-num">{{ n }}</td></tr>{% endfor %}</table>
+            {% else %}<p class="muted">Keine Meldungen.</p>{% endif %}
+          </div>
+        {% elif b.btype == 'review' %}
+          {% set d = b.data %}
+          <div class="meta"><span class="src">{{ ico.source_icon('review') }} {{ b.title or 'Rueckblick' }}</span>
+            {% if d %}<span class="when">{{ d.days }}d · {{ d.total }} geloest</span>{% endif %}</div>
+          <div class="tile-body">
+            {% if d %}<div class="tile-badges">{% for team, n in d.per_team %}<span class="tile-badge">{{ team }} <b>{{ n }}</b></span>{% endfor %}</div>
+            {% if d.recent %}<table class="tile-table">{% for t in d.recent[:8] %}<tr><td>{{ t.title[:60] }}</td><td class="tile-num">{{ t.team }}</td></tr>{% endfor %}</table>{% endif %}
+            {% else %}<p class="muted">—</p>{% endif %}
+          </div>
+        {% endif %}
+      </li>
+      {% else %}
+      {% set it = row.it %}
+      {% set _rank = it['rank_score']|default(none) %}
+      {% set _urg = _rank if _rank is not none else (it['urgency'] or 0) %}
+      {% set _heat = '%.2f' % (_urg / 100.0) %}
+      {% set _heatclass = 'hot' if _urg >= 80 else ('warm' if _urg >= 50 else 'cool') %}
+      {% set _sizeclass = 'size-xl' if row.idx == 0 else ('size-l' if row.idx in [1, 2] else '') %}
+      <li class="item {% if it['override'] %}override{% endif %} {{ _sizeclass }}" data-src="{{ it['source_type'] }}" style="--heat: {{ _heat }}">
+        <div class="score">{{ '%.0f' % _urg }}</div>
+        <div class="body">
+          <div class="meta">
+            <span class="group">{{ it["group_name"] }}</span>
+            <span class="src">{{ ico.source_icon(it["source_type"]) }} {{ ico.source_label(it["source_type"]) }}</span>
+            {% if it["sender"] %}<span class="sender">{{ it["sender"] }}</span>{% endif %}
+            {% if it["override"] %}<span class="badge">Eskalation</span>{% endif %}
+            {% if it["ts_source"] %}<span class="when">{{ it['ts_source']|ago }}</span>{% endif %}
+          </div>
+          <div class="title">{{ it["title"] or "(ohne Titel)" }}</div>
+          {% if it["body"] %}<div class="snippet">{{ it["body"][:200] }}</div>{% endif %}
+          {% if it["reason"] %}<div class="reason">{{ it["reason"] }}</div>{% endif %}
+        </div>
+        <div class="gauge {{ _heatclass }}" aria-hidden="true"><span class="n">{{ '%.0f' % _urg }}</span></div>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+  </main>
+</body>
+</html>

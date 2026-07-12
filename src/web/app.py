@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import sqlite3
 import threading
 import time
@@ -55,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.3.1"
+APP_VERSION = "1.4.1"
 
 
 class NotAuthenticated(Exception):
@@ -445,40 +446,44 @@ def _register_routes(app):
 
     # --- NextUp: Dashboard ----------------------------------------------------
 
+    # Baut die gemeinsamen Dashboard-Daten (Items-Stream aus Ranking + Bloecken,
+    # News-Ticker, Arbeitszeit-Segmente). Von Dashboard UND Kiosk genutzt.
+    def _dashboard_data(conn, acc, group=None):
+        now = time.time()
+        ranking = store.get_ranking(conn, acc["user_id"], now, group_id=group)
+        blocks = []
+        for p in store.list_grafana_panels(conn, acc["user_id"]):
+            b = dict(p); b["btype"] = "grafana"; blocks.append(b)
+        for tl in store.list_tiles(conn, acc["user_id"]):
+            b = dict(tl); b["btype"] = tl["kind"]
+            b["data"] = _tile_data(conn, acc, tl["kind"]); blocks.append(b)
+        stream = _dashboard_stream(ranking, blocks)
+        ticker = store.list_ticker_teams(conn, acc["user_id"])
+        wt_segments, wt_opts = None, {}
+        if app.state.worktime_enabled:
+            row = store.get_worktime_status(conn)
+            payload = json.loads(row["payload"]) if (row and row["payload"]) else None
+            wt_opts = _worktime_opts(conn)
+            wt_segments = worktime_segments(payload, wt_opts, _calendar_payload(conn))
+        return {"ranking": ranking, "stream": stream, "ticker": ticker,
+                "wt_segments": wt_segments, "wt_opts": wt_opts,
+                "ticker_speed": store.get_setting_int(conn, "ticker.speed", 90)}
+
     @app.get("/", response_class=HTMLResponse)
     def dashboard(request: Request, acc: dict = Depends(require_account), group: int = None):
         conn = open_db()
         try:
             now = time.time()
             groups = store.list_groups(conn, acc["user_id"])
-            ranking = store.get_ranking(conn, acc["user_id"], now, group_id=group)
             st = store.get_status(conn, acc["user_id"])
             t = st["totals"]
             dash = {
                 "alive": bool(st["last_event"] and (now - st["last_event"]) < 5400),
                 "scored": t["scored"], "queue": t["open_unscored"], "total": t["items"],
             }
-            # Bloecke: Grafana-Panels + Funktionskacheln, gemeinsam positioniert.
-            blocks = []
-            for p in store.list_grafana_panels(conn, acc["user_id"]):
-                b = dict(p)
-                b["btype"] = "grafana"
-                blocks.append(b)
-            for t in store.list_tiles(conn, acc["user_id"]):
-                b = dict(t)
-                b["btype"] = t["kind"]
-                b["data"] = _tile_data(conn, acc, t["kind"])
-                blocks.append(b)
-            stream = _dashboard_stream(ranking, blocks)
-            ticker = store.list_ticker_teams(conn, acc["user_id"])
-            # Arbeitszeit-Laufband: globaler Snapshot -> Anzeige-Segmente (+Optionen).
-            wt_segments, wt_opts = None, {}
-            if app.state.worktime_enabled:
-                row = store.get_worktime_status(conn)
-                payload = json.loads(row["payload"]) if (row and row["payload"]) else None
-                wt_opts = _worktime_opts(conn)
-                wt_segments = worktime_segments(payload, wt_opts, _calendar_payload(conn))
-            ticker_speed = store.get_setting_int(conn, "ticker.speed", 90)
+            dd = _dashboard_data(conn, acc, group)
+            ranking = dd["ranking"]; stream = dd["stream"]; ticker = dd["ticker"]
+            wt_segments = dd["wt_segments"]; wt_opts = dd["wt_opts"]; ticker_speed = dd["ticker_speed"]
             return render("dashboard.html", nav_active="nextup", account_jid=acc["jid"],
                           account_state=account_state(acc["jid"]), groups=groups,
                           items=ranking, stream=stream, active_group=group, dash=dash,
@@ -587,8 +592,16 @@ def _register_routes(app):
             review_days = store.get_setting_int(conn, "review.days", 7)
             review_exclude = store.get_setting(conn, "review.exclude",
                                                "vermutlich SPAM, Systemmeldungen")
+            # Status-Hinweise fuer die Navigationsleiste: Fehler je Modul.
+            news_error = any(t["status"] == "error" for t in ticker_teams)
+            cal_error = bool(cal_payload and cal_payload.get("feeds")
+                             and any(f.get("error") for f in cal_payload["feeds"]))
+            kiosk_cfg = _kiosk_cfg(conn)
         finally:
             conn.close()
+        # Absolute Display-URL aus dem Host-Header (extern via nginx/traefik).
+        host = request.headers.get("host", "")
+        kiosk_url = ("https://%s/kiosk/%s" % (host, kiosk_cfg["token"])) if kiosk_cfg["token"] else ""
         return render("settings.html", nav_active="settings", account_jid=acc["jid"],
                       account_state=account_state(acc["jid"]),
                       grafana_panels=panels, ticker_teams=ticker_teams,
@@ -600,6 +613,8 @@ def _register_routes(app):
                       cal_url=cal_cfg.get("url", ""), cal_user=cal_cfg.get("username", ""),
                       cal_configured=bool(cal_cfg.get("url")), cal_interval=cal_interval,
                       cal_status=cal_payload, cal_feeds=cal_feeds,
+                      news_error=news_error, cal_error=cal_error,
+                      kiosk=kiosk_cfg, kiosk_url=kiosk_url,
                       tiles=tiles, briefing_hour=briefing_hour, ops_room=ops_room,
                       ops_hours=ops_hours, review_days=review_days,
                       review_exclude=review_exclude,
@@ -867,6 +882,93 @@ def _register_routes(app):
         finally:
             conn.close()
         return RedirectResponse("/settings?msg=Kalender-Feed+entfernt", status_code=303)
+
+    # --- Kiosk / Buero-Display -------------------------------------------------
+
+    # Erlaubte Werte je Display-Einstellung (Whitelist -> geht als data-Attribut ins HTML).
+    _KIOSK_ALLOWED = {
+        "theme": {"auto", "light", "dark"},
+        "accent": {"blue", "teal", "green", "purple", "orange", "red"},
+        "view": {"signal", "grid", "list"},
+        "lines": {"0", "1", "2", "3", "5"},
+        "cols": {"auto", "2", "3", "4"},
+        "r1": {"1", "2", "3", "4", "6"}, "r2": {"1", "2", "3", "4", "6"},
+        "r3": {"1", "2", "3", "4", "6"}, "rn": {"1", "2", "3", "4", "6"},
+        "max": {"0", "10", "20", "30", "50"},
+    }
+    _KIOSK_DEFAULT = {"theme": "dark", "accent": "green", "view": "signal", "lines": "1",
+                      "cols": "auto", "r1": "3", "r2": "4", "r3": "6", "rn": "6", "max": "0"}
+
+    def _kiosk_cfg(conn):
+        cfg = {k: store.get_setting(conn, "kiosk." + k, v) for k, v in _KIOSK_DEFAULT.items()}
+        cfg["tickers"] = store.get_setting(conn, "kiosk.tickers", "1") != "0"
+        cfg["refresh"] = store.get_setting_int(conn, "kiosk.refresh", 90)
+        cfg["token"] = store.get_setting(conn, "kiosk.token", "")
+        return cfg
+
+    @app.post("/settings/kiosk")
+    async def settings_kiosk(request: Request, acc: dict = Depends(require_account)):
+        form = await request.form()
+        conn = open_db()
+        try:
+            now = time.time()
+            for k, allowed in _KIOSK_ALLOWED.items():
+                v = (form.get(k) or "").strip()
+                if v in allowed:
+                    store.set_setting(conn, "kiosk." + k, v, now)
+            store.set_setting(conn, "kiosk.tickers", "1" if form.get("tickers") == "on" else "0", now)
+            try:
+                refresh = max(15, min(int(form.get("refresh") or 90), 3600))
+            except (TypeError, ValueError):
+                refresh = 90
+            store.set_setting(conn, "kiosk.refresh", refresh, now)
+        finally:
+            conn.close()
+        return RedirectResponse("/settings?msg=Display-Einstellungen+gespeichert", status_code=303)
+
+    # Token (neu) erzeugen -> bindet das Display an dieses Konto; alte URL wird ungueltig.
+    @app.post("/settings/kiosk/token")
+    def settings_kiosk_token(request: Request, acc: dict = Depends(require_account)):
+        conn = open_db()
+        try:
+            now = time.time()
+            store.set_setting(conn, "kiosk.token", secrets.token_urlsafe(24), now)
+            store.set_setting(conn, "kiosk.user_id", acc["user_id"], now)
+        finally:
+            conn.close()
+        return RedirectResponse("/settings?msg=Neue+Display-URL+erzeugt", status_code=303)
+
+    @app.post("/settings/kiosk/revoke")
+    def settings_kiosk_revoke(request: Request, acc: dict = Depends(require_account)):
+        conn = open_db()
+        try:
+            store.set_setting(conn, "kiosk.token", "", time.time())
+        finally:
+            conn.close()
+        return RedirectResponse("/settings?msg=Display-URL+deaktiviert", status_code=303)
+
+    # Kiosk-Anzeige: token-geschuetzt, OHNE Login, read-only, ohne Chat. Fuer Buero-
+    # Displays ohne Bedienung -> Aussehen kommt komplett aus den Display-Einstellungen.
+    @app.get("/kiosk/{token}", response_class=HTMLResponse)
+    def kiosk(token: str):
+        conn = open_db()
+        try:
+            k = _kiosk_cfg(conn)
+            if not k["token"] or not secrets.compare_digest(token, k["token"]):
+                raise HTTPException(status_code=404)
+            uid = store.get_setting_int(conn, "kiosk.user_id", 0)
+            jid = registry.jid_for_id(uid) if uid else None
+            if not jid:
+                raise HTTPException(status_code=404)
+            acc = {"user_id": uid, "jid": jid, "archive_path": registry.archive_path(jid)}
+            dd = _dashboard_data(conn, acc)
+        finally:
+            conn.close()
+        show_tk = k["tickers"]
+        return render("kiosk.html", k=k, items=dd["ranking"], stream=dd["stream"],
+                      ticker=(dd["ticker"] if show_tk else None),
+                      wt_segments=(dd["wt_segments"] if show_tk else None),
+                      wt=dd["wt_opts"], ticker_speed=dd["ticker_speed"])
 
     # Anzeige-/Schwellwert-Optionen des Arbeitszeit-Laufbands (app_settings).
     def _worktime_opts(conn):

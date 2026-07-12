@@ -20,7 +20,7 @@ id compass || useradd --system --home /opt/compass --shell /usr/sbin/nologin com
 install -d -o compass -g compass /opt/compass /var/lib/compass /var/log/compass
 
 # Code holen (oder rsync vom Arbeitsplatz)
-git clone https://github.com/x-gate-de/compass.git /opt/compass
+git clone <repo> /opt/compass            # github.com/x-gate-de/compass.git
 cd /opt/compass
 python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
