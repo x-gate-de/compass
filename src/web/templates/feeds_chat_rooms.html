@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="wizard">
+  <h1>Chat-Feeds auswaehlen</h1>
+  {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
+  <p class="muted">Je angehaktem Kontakt/Raum wird ein Feed angelegt.</p>
+  <form method="post" action="/feeds/chat/create">
+    <input type="hidden" name="group_id" value="{{ form['group_id'] }}">
+    <input type="hidden" name="count" value="{{ rooms|length }}">
+    <table class="pick">
+      <thead><tr><th>Verfolgen</th><th>Name</th><th>Typ</th><th>Prio</th><th>Max. Alter (h)</th><th>LLM</th></tr></thead>
+      <tbody>
+        {% for r in rooms %}
+        <tr>
+          <td><input type="checkbox" name="include_{{ loop.index0 }}"></td>
+          <td>{{ r['label'] }}
+            <input type="hidden" name="partner_{{ loop.index0 }}" value="{{ r['id'] }}">
+            <input type="hidden" name="room_{{ loop.index0 }}" value="{{ '1' if r['is_room'] else '0' }}">
+            <input type="hidden" name="label_{{ loop.index0 }}" value="{{ r['label'] }}">
+          </td>
+          <td>{{ 'Raum' if r['is_room'] else '1:1' }}</td>
+          <td><input type="number" name="prio_{{ loop.index0 }}" value="3" min="1" max="5" style="width:56px"></td>
+          <td><input type="number" name="exp_{{ loop.index0 }}" value="24" style="width:72px"></td>
+          <td><input type="checkbox" name="llm_{{ loop.index0 }}" checked></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty">Keine Kontakte/Raeume im Archiv gefunden.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="btn" type="submit">Ausgewaehlte Feeds anlegen</button>
+    <a class="btn-small" href="/feeds">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

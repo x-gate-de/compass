@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>compass — Anmeldung</title>
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <div class="brand-big">com<span class="up">pass</span></div>
+    <p class="sub">Interne Informations- und Kommunikationszentrale</p>
+
+    {% if error %}<div class="msg error">Anmeldung fehlgeschlagen. Bitte Zugangsdaten pruefen.</div>{% endif %}
+    {% if throttle %}<div class="msg error">Zu viele Versuche. Bitte kurz warten.</div>{% endif %}
+
+    {% if waiting %}
+      <div class="msg info" id="waiting">Verbindet <b>{{ pending_jid }}</b> …</div>
+      <script>
+        async function poll() {
+          try {
+            const r = await fetch('/api/login_status', {cache: 'no-store'});
+            const j = await r.json();
+            if (j.status === 'ok') { location.href = '/'; return; }
+            if (j.status === 'failed') { location.href = '/login?error=1'; return; }
+          } catch (e) {}
+          setTimeout(poll, 1500);
+        }
+        poll();
+      </script>
+    {% else %}
+      <form method="post" action="/login" class="login-form">
+        <label>JID (z.B. name@example.com)
+          <input type="text" name="jid" autocomplete="username" autofocus required>
+        </label>
+        <label>Passwort
+          <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <label>Server (optional)
+          <input type="text" name="server" value="{{ default_server }}" placeholder="xmpp.example.com">
+        </label>
+        <button type="submit" class="btn">Anmelden</button>
+      </form>
+    {% endif %}
+  </div>
+</body>
+</html>

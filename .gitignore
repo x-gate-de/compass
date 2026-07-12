@@ -1,0 +1,21 @@
+venv/
+__pycache__/
+*.pyc
+*.swp
+*.swo
+*~
+*.log
+config.yaml
+config.json
+.env
+
+# Runtime and state data (contain item plaintext and encrypted feed credentials!)
+*.sqlite
+*.sqlite3
+*.db
+*.db*
+data/
+state/
+
+# Claude Code local files (skills, settings) - not committed
+.claude/

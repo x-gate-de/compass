@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="feeds-admin">
+  <h1>Feeds &amp; Gruppen</h1>
+  {% if msg %}<div class="msg info">{{ msg }}</div>{% endif %}
+  {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
+
+  {# "Neue Gruppe" entfernt (ungenutzt). Gruppen existieren nur noch intern als
+     Feed-Container; fehlt eine, legt die Feed-Seite automatisch "Feeds" an. #}
+  {# Grafana-Panels und News-Ticker werden zentral unter /settings verwaltet. #}
+  <p class="muted">Grafana-Panels und News-Ticker findest du in den
+    <a href="/settings">Einstellungen</a>.</p>
+
+  {% if not groups %}
+    <p class="empty">Noch keine Gruppe. Lege zuerst eine Gruppe an, dann Feeds hinzufuegen.</p>
+  {% endif %}
+
+  {% for g in groups %}
+  <div class="group">
+    <h2>{{ g['name'] }} <span class="muted">P{{ g['priority'] }}</span></h2>
+    <ul class="feedlist">
+      {% for f in feeds_by_group[g['id']] %}
+      <li>
+        <span class="fname">{{ f['name'] }}</span>
+        <span class="ftype">{{ f['connector_type'] }}</span>
+        <span class="fstat s-{{ f['status'] }}">{{ f['status'] }}</span>
+        <a class="btn-small" href="/feeds/{{ f['id'] }}/edit">Bearbeiten</a>
+        <form method="post" action="/feeds/{{ f['id'] }}/sync"><button class="btn-small">Sync</button></form>
+        <form method="post" action="/feeds/{{ f['id'] }}/delete"><button class="btn-small">Loeschen</button></form>
+      </li>
+      {% else %}
+      <li class="empty">Keine Feeds in dieser Gruppe.</li>
+      {% endfor %}
+    </ul>
+
+    <details class="box">
+      <summary>Feed hinzufuegen</summary>
+
+      <h3>Chat (aus eigenem Archiv)</h3>
+      <form method="post" action="/feeds/chat/discover">
+        <input type="hidden" name="group_id" value="{{ g['id'] }}">
+        <button class="btn-small" type="submit">Kontakte/Raeume auswaehlen</button>
+      </form>
+
+      <h3>IMAP (Mail)</h3>
+      <form method="post" action="/feeds/imap/discover" class="grid">
+        <input type="hidden" name="group_id" value="{{ g['id'] }}">
+        <label>Name <input name="name" required></label>
+        <label>Prioritaet <input type="number" name="priority" value="3" min="1" max="5"></label>
+        <label>Host <input name="host" required></label>
+        <label>Port <input type="number" name="port" value="993"></label>
+        <label>Benutzer <input name="username" required></label>
+        <label>Passwort <input type="password" name="password" required></label>
+        <label class="chk"><input type="checkbox" name="tls_verify" checked> TLS pruefen</label>
+        <button class="btn-small" type="submit">Ordner auswaehlen</button>
+      </form>
+
+      <h3>CalDAV (Kalender)</h3>
+      <form method="post" action="/feeds/caldav/discover" class="grid">
+        <input type="hidden" name="group_id" value="{{ g['id'] }}">
+        <label>Name <input name="name" required></label>
+        <label>Prioritaet <input type="number" name="priority" value="3" min="1" max="5"></label>
+        <label>URL <input name="url" required></label>
+        <label>Benutzer <input name="username" required></label>
+        <label>Passwort <input type="password" name="password" required></label>
+        <button class="btn-small" type="submit">Kalender auswaehlen</button>
+      </form>
+
+      <h3>Odoo (Tickets/Aufgaben)</h3>
+      <form method="post" action="/feeds/odoo" class="grid">
+        <input type="hidden" name="group_id" value="{{ g['id'] }}">
+        <label>Typ
+          <select name="connector_type">
+            <option value="odoo_helpdesk">HelpDesk-Tickets</option>
+            <option value="odoo_project">Projekt-Aufgaben</option>
+          </select>
+        </label>
+        <label>Name <input name="name" required></label>
+        <label>URL <input name="url" required></label>
+        <label>Datenbank <input name="database" required></label>
+        <label>Login <input name="username" required></label>
+        <label>API-Key <input type="password" name="access_token" required></label>
+        <button class="btn-small" type="submit">Odoo-Feed anlegen</button>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+# -----------------------------------------------------------------------------
+# Datei: deploy/compass.service
+# Autor: Torben <github@x-gate.de>
+# Version: 1.0.0
+# Lizenz: AGPL-3.0-or-later — siehe LICENSE.
+# Zweck:
+# - systemd-Unit fuer den compass-Daemon: vereint XMPP/OMEMO-Account-Manager (Chat)
+#   und die Aggregator-Schleifen (Poll/Scoring/Decay/Retention/Re-Rank), Dauerbetrieb.
+# Betriebs- und Wartungshinweise:
+# - Installation: nach /etc/systemd/system/ kopieren, daemon-reload, enable --now.
+# - Laeuft als unprivilegierter Systembenutzer compass.
+# -----------------------------------------------------------------------------
+
+[Unit]
+Description=compass - Daemon (XMPP/OMEMO + Aggregator Poll/Scoring/Decay/Retention)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=compass
+Group=compass
+WorkingDirectory=/opt/compass
+ExecStart=/opt/compass/venv/bin/python /opt/compass/run_daemon.py --config /opt/compass/config.yaml
+Restart=always
+RestartSec=5
+
+# Haertung
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+# Schreibzugriff nur auf State und Logs.
+ReadWritePaths=/var/lib/compass /var/log/compass
+
+[Install]
+WantedBy=multi-user.target

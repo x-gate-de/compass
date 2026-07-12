@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="search">
+  <h1>Suche</h1>
+  <form method="get" action="/search">
+    <input type="search" name="q" value="{{ q }}" placeholder="Suchbegriff (mind. 2 Zeichen)" minlength="2" autofocus>
+    <button class="btn-small" type="submit">Suchen</button>
+  </form>
+  {% if q and not results %}<p class="empty">Keine Treffer fuer &laquo;{{ q }}&raquo;.</p>{% endif %}
+  <ul class="results">
+    {% for r in results %}
+    <li>
+      <a href="/c/{{ r['partner'] }}">
+        <span class="r-top"><b>{{ r['name'] }}</b> <span class="muted">{{ r['ts'] }}</span></span>
+        {# parts: ungerade Indizes sind die Fundstellen -> markieren. #}
+        <span class="r-snip">{% for part in r['parts'] %}{% if loop.index0 % 2 == 1 %}<mark>{{ part }}</mark>{% else %}{{ part }}{% endif %}{% endfor %}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

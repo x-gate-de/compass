@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="conv-view">
+  <div class="conv-head">
+    <a class="btn-small" href="/chat">&larr;</a>
+    <span class="ava" style="--h: {{ hue }}">{% if has_avatar %}<img class="ava-img" src="/avatar/{{ partner }}" alt="">{% else %}{{ initials }}{% endif %}</span>
+    <b>{{ name }}</b>
+    {% if is_room %}<span class="tag">Raum</span>{% endif %}
+    <div class="conv-head-actions">
+      {% if is_room %}
+      <form method="post" action="/rooms/leave" class="inline">
+        <input type="hidden" name="room_jid" value="{{ partner }}">
+        <button class="btn-small" type="submit" title="Raum verlassen (Archiv bleibt erhalten)">Verlassen</button>
+      </form>
+      {% endif %}
+      {% if not is_room %}<a class="btn-small" href="/devices/{{ partner }}">Geraete</a>{% endif %}
+      <button class="btn-small" id="push-toggle" data-partner="{{ partner }}" hidden>Push</button>
+      {# Immer aktiv: auch bei leerem Verlauf (frisch beigetretener Raum) muss das
+         MAM-Nachladen vom Server anstossbar sein. #}
+      <form method="post" action="/c/{{ partner }}/loadmore" class="inline">
+        <button class="btn-small" title="Aeltere Nachrichten vom Server laden (MAM)">Aeltere laden</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="messages" id="messages" data-partner="{{ partner }}" data-max="{{ max_id }}"
+       data-is-room="{{ '1' if is_room else '0' }}">
+    {% for m in messages %}
+    {% include "_message.html" %}
+    {% endfor %}
+  </div>
+
+  {% if pending %}
+  <div class="pending">
+    {% for p in pending %}
+    <div class="p p-{{ p['status'] }}">⏳ {{ p['body'] }}{% if p['error'] %} — {{ p['error'] }}{% endif %}
+      {% if p['status'] == 'error' %}
+      <form method="post" action="/c/{{ partner }}/dismiss/{{ p['id'] }}" class="inline">
+        <button class="p-dismiss" title="Fehlgeschlagenen Sendeauftrag verwerfen">✕</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Zitat-Vorschau (Reply): app.js fuellt Text + hidden-Feld; ✕ verwirft. #}
+  <div class="quote-bar" id="quote-bar" hidden>
+    <span class="qb-mark">&#8618;</span><span class="qb-text" id="quote-text"></span>
+    <button type="button" class="qb-cancel" id="quote-cancel" title="Zitat verwerfen">✕</button>
+  </div>
+  <form method="post" action="/c/{{ partner }}/send" class="send" enctype="multipart/form-data" id="send-form">
+    <input type="hidden" name="quote" id="quote-field">
+    <textarea name="body" id="send-body" rows="2" placeholder="Nachricht …"></textarea>
+    {% if not is_room %}<label class="attach" title="Anhang senden (1:1, verschluesselt)">📎<input type="file" name="file" id="send-file" hidden></label>{% endif %}
+    <button class="btn" type="submit">Senden</button>
+  </form>
+  <div class="send-err" id="send-err" hidden></div>
+  {# Drag&Drop-Ziel-Overlay (app.js blendet es bei dragover ein). #}
+  {% if not is_room %}<div class="drop-overlay" id="drop-overlay" hidden>Datei hier ablegen — wird verschluesselt gesendet</div>{% endif %}
+</section>
+<script src="/static/app.js?v={{ app_version }}" defer></script>
+{% endblock %}

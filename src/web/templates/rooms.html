@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="rooms">
+  <h1>Raeume</h1>
+
+  <h2>Beigetreten</h2>
+  {% if not joined %}<p class="empty">Noch keinem Raum beigetreten.</p>{% endif %}
+  <ul class="convs">
+    {% for r in joined %}
+    <li class="room-avail">
+      <a href="/c/{{ r['jid'] }}" class="conv-main" style="text-decoration:none; color:inherit;">
+        <b>{{ r['name'] }}</b><span class="conv-prev">{{ r['jid'] }}</span></a>
+      <form method="post" action="/rooms/leave" class="inline">
+        <input type="hidden" name="room_jid" value="{{ r['jid'] }}">
+        <button class="btn-small" type="submit" title="Raum verlassen (Archiv bleibt erhalten)">Verlassen</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <h2>Verfuegbar</h2>
+  {% if not available %}<p class="empty">Keine oeffentlichen Raeume entdeckt.</p>{% endif %}
+  <ul class="convs">
+    {% for r in available %}
+    <li class="room-avail">
+      <span class="conv-main"><b>{{ r['name'] }}</b><span class="conv-prev">{{ r['jid'] }}</span></span>
+      {% if r['joined'] %}<a class="btn-small" href="/c/{{ r['jid'] }}">Oeffnen</a>
+      {% else %}
+      <form method="post" action="/rooms/join" class="inline">
+        <input type="hidden" name="room_jid" value="{{ r['jid'] }}">
+        <button class="btn-small" type="submit">Beitreten</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,22 @@
+{# Rendert eine einzelne Nachricht `m`. Server-seitig genutzt; die Live-Aktualisierung
+   baut die gleiche Struktur in app.js nach. #}
+<div class="m m-{{ m['direction'] }}{{ ' m-enc' if not m['decrypted'] else '' }}">
+  {% if m['sender'] and m['direction'] == 'in' and is_room %}<div class="m-sender">{{ m['sender'] }}</div>{% endif %}
+  {% if m['quote'] %}<div class="m-quote">{{ m['quote'] }}</div>{% endif %}
+  {% if m['media'] %}
+    {% if m['media']['kind'] == 'image' %}
+      <a href="{{ m['media']['url'] }}" target="_blank" rel="noopener"><img class="m-img" src="{{ m['media']['url'] }}" alt="{{ m['media']['name'] }}" loading="lazy"></a>
+    {% else %}
+      <a class="m-file" href="{{ m['media']['url'] }}" target="_blank" rel="noopener">📎 {{ m['media']['name'] }}</a>
+    {% endif %}
+  {% elif m['decrypted'] %}
+    <div class="m-text">{{ m['text'] }}</div>
+  {% else %}
+    <div class="m-text">[verschluesselt]</div>
+  {% endif %}
+  <div class="m-meta">{{ m['ts'] }}{% if m['direction'] == 'out' and m['status'] %} · {{ m['status'] }}{% endif %}</div>
+  {% if m['decrypted'] %}
+  <button type="button" class="m-reply" title="Zitieren/Antworten"
+          data-reply="{{ (m['text'] or (m['media']['name'] if m['media'] else ''))[:160] }}">&#8618;</button>
+  {% endif %}
+</div>

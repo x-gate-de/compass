@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}compass — NextUp{% endblock %}
+{# Kein Meta-Refresh mehr: dashboard.js laedt die Item-Liste sanft nach, damit
+   getippter Text (Chatleiste, Inline-Antwort) nicht verloren geht. #}
+{% block head %}<script src="/static/dashboard.js?v={{ app_version }}" defer></script>{% endblock %}
+{# Daemon-Status kompakt in der Kopfzeile (spart die eigene Zeile im Inhalt). #}
+{% block topstatus %}
+{% if dash %}
+<a class="dash-status" href="/status" title="Zur Status-Seite">
+  <span class="dot {{ 'on' if dash['alive'] else 'off' }}"></span>
+  <span class="ds-state">{{ 'aktiv' if dash['alive'] else 'inaktiv?' }}</span>
+  <span class="ds-num">{{ dash['scored'] }}</span> bewertet
+  {% if dash['queue'] %}<span class="sep">·</span><span class="ds-num ds-q">{{ dash['queue'] }}</span> in Arbeit{% endif %}
+  <span class="sep">·</span>{{ dash['total'] }} gesamt
+</a>
+{% endif %}
+{% endblock %}
+{% block content %}
+{% if ticker %}
+{# News-Ticker: Laufband mit der LLM-Top-Schlagzeile je HelpDesk-Team.
+   Inhalt wird von dashboard.js zyklisch ueber /api/ticker aktualisiert. #}
+<div class="ticker" id="ticker" aria-label="News-Ticker">
+  <span class="tk-label">HelpDesk</span>
+  <div class="tk-viewport"><div class="tk-track" id="tk-track" data-speed="{{ ticker_speed or 90 }}">
+    {% for t in ticker %}
+    <span class="tk-item"><b class="tk-team">{{ t['team_name'] }}</b>
+      {{- ' ' }}{{ t['headline'] or 'sammle Daten …' }}
+      {%- if t['ticket_count'] is not none %} <span class="tk-count">({{ t['ticket_count'] }})</span>{% endif %}</span>
+    {% endfor %}
+  </div></div>
+</div>
+{% endif %}
+{% if wt_segments %}
+{# Arbeitszeit-Laufband: wer ist angemeldet (Heuristik), Ist-Zeit heute, Fehltage.
+   Segmente kommen aus /api/worktime (dashboard.js aktualisiert zyklisch). #}
+{# Akzentfarbe (--wtc) und Geschwindigkeit kommen aus den Arbeitszeit-Settings;
+   Farbwerte sind serverseitig auf Hex validiert. #}
+<div class="ticker ticker-work" id="wticker" aria-label="Arbeitszeit-Ticker"
+     {% if wt and wt.color %}style="--wtc: {{ wt.color }}"{% endif %}>
+  <span class="tk-label tk-label-work">Mitarbeiter</span>
+  <div class="tk-viewport"><div class="tk-track" id="wt-track" data-speed="{{ (wt.speed if wt else 90) or 90 }}">
+    {% for s in wt_segments %}
+    <span class="tk-item tk-{{ s.kind }}"><b class="tk-team">{{ s.label }}</b>
+      {%- if s.parts %} {% for pt in s.parts %}<span {% if pt.c %}style="color: {{ pt.c }}"{% endif %}>{{ pt.t }}</span>{% endfor %}
+      {%- elif s.text %} {{ s.text }}{% endif %}</span>
+    {% endfor %}
+  </div></div>
+</div>
+{% endif %}
+<div class="dash-wrap">
+<div class="dash-main">
+{% if not items %}
+<p class="muted">Nichts offen. Neue Eintraege erscheinen automatisch; lege unter <a href="/feeds">Feeds</a> Quellen an.</p>
+{% endif %}
+
+<ul class="items">
+  {% for row in stream %}
+  {% if row.kind == 'block' %}
+  {% set b = row.b %}
+  {% set _gs = {'12':12,'9':9,'8':8,'6':6,'4':4,'3':3,'full':12,'half':6} %}
+  {% set gspan = _gs.get(b.width|string, 12) %}
+  {# Rahmenfarbe: serverseitig auf Hex validiert -> sicher als inline-Style
+     (--pcol steuert Rahmen + weichen Schein, CSS .gpanel). #}
+  <li class="item gpanel {{ 'gtile' if b.btype != 'grafana' }} tile-{{ b.btype }}" data-gspan="{{ gspan }}"
+      data-src="{{ b.btype }}"
+      style="grid-column: {{ '1 / -1' if gspan >= 12 else 'span ' ~ gspan }};{% if b.color %} --pcol: {{ b.color }};{% endif %}">
+    {% if b.btype == 'grafana' %}
+      {% if b.title %}<div class="gpanel-head">{{ b.title }}</div>{% endif %}
+      {% if b.mode == 'iframe' %}
+      <iframe class="gpanel-frame" src="{{ b.embed_url }}" style="height: {{ b.height }}px"
+              loading="lazy" title="{{ b.title }}"></iframe>
+      {% else %}
+      <img class="gpanel-img" src="/grafana/panels/{{ b.id }}/img?w=1400&h={{ b.height }}"
+           alt="{{ b.title }}" loading="lazy">
+      {% endif %}
+    {% elif b.btype == 'briefing' %}
+      <div class="meta">
+        <span class="src">{{ ico.source_icon('briefing') }} {{ b.title or 'Morgen-Briefing' }}</span>
+        {% if b.data %}<span class="when">{{ b.data.updated_ts|dt }}</span>{% endif %}
+      </div>
+      <div class="tile-body">
+        {% if b.data and b.data.text %}
+        <ul class="tile-list">
+          {% for line in b.data.text.split('\n') if line.strip() %}
+          <li>{{ line.strip().lstrip('-').strip() }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="muted">Wird beim naechsten Daemon-Lauf erzeugt …</p>{% endif %}
+      </div>
+    {% elif b.btype == 'team' %}
+      {% set d = b.data %}
+      <div class="meta">
+        <span class="src">{{ ico.source_icon('team') }} {{ b.title or 'Team & Planung' }}</span>
+        {% if d.oncall %}<span class="sender">RB: {{ d.oncall|join(', ') }}</span>{% endif %}
+      </div>
+      <div class="tile-body">
+        {% if d.oncall_gap %}<div class="tile-warn">⚠ Keine Rufbereitschaft in den naechsten 7 Tagen geplant!</div>{% endif %}
+        <div class="tile-row"><span class="tile-k">Rufbereitschaft</span>
+          <span class="tile-v {{ 'tile-ok' if d.oncall }}">{{ d.oncall|join(', ') or '—' }}</span></div>
+        <div class="tile-row"><span class="tile-k">Jetzt aktiv</span>
+          <span class="tile-v">{{ d.active|join(', ') or '—' }}</span></div>
+        <div class="tile-row"><span class="tile-k">Heute abwesend</span>
+          <span class="tile-v">{{ d.absent|join(', ') or '—' }}</span></div>
+        <div class="tile-row"><span class="tile-k">Demnaechst weg</span>
+          <span class="tile-v">{{ d.upcoming|join(' · ') or '—' }}</span></div>
+      </div>
+    {% elif b.btype == 'ops' %}
+      {% set d = b.data %}
+      <div class="meta">
+        <span class="src">{{ ico.source_icon('ops') }} {{ b.title or 'Betrieb & Monitoring' }}</span>
+        <span class="when">{{ d.hours }}h · {{ d.total }} Meldungen{% if d.last_ts %} · {{ d.last_ts|ago }}{% endif %}</span>
+      </div>
+      <div class="tile-body">
+        {% if d.top %}
+        <table class="tile-table">
+          {% for host, n in d.top %}<tr><td>{{ host }}</td><td class="tile-num">{{ n }}</td></tr>{% endfor %}
+        </table>
+        {% else %}<p class="muted">Keine Meldungen im Zeitraum ({{ d.room }}).</p>{% endif %}
+      </div>
+    {% elif b.btype == 'review' %}
+      {% set d = b.data %}
+      <div class="meta">
+        <span class="src">{{ ico.source_icon('review') }} {{ b.title or 'Rueckblick' }}</span>
+        {% if d %}<span class="when">{{ d.days }}d · {{ d.total }} geloest · {{ d.updated_ts|dt }}</span>{% endif %}
+      </div>
+      <div class="tile-body">
+        {% if d %}
+        <div class="tile-badges">
+          {% for team, n in d.per_team %}<span class="tile-badge">{{ team }} <b>{{ n }}</b></span>{% endfor %}
+        </div>
+        {% if d.recent %}
+        <table class="tile-table">
+          {% for t in d.recent[:8] %}<tr><td>{{ t.title[:60] }}</td><td class="tile-num">{{ t.team }}</td></tr>{% endfor %}
+        </table>
+        {% endif %}
+        {% else %}<p class="muted">Wird beim naechsten Daemon-Lauf erzeugt …</p>{% endif %}
+      </div>
+    {% endif %}
+  </li>
+  {% else %}
+  {% set it = row.it %}
+  {# Anzeige-Kennzahl: bevorzugt der vergleichende rank_score (0-100, gespreizt), sonst
+     die einzelne Dringlichkeit urgency. Kartengroesse (Signalfeld) folgt dem Rang. #}
+  {% set _rank = it['rank_score']|default(none) %}
+  {% set _urg = _rank if _rank is not none else (it['urgency'] or 0) %}
+  {% set _heat = '%.2f' % (_urg / 100.0) %}
+  {% set _heatclass = 'hot' if _urg >= 80 else ('warm' if _urg >= 50 else 'cool') %}
+  {% set _sizeclass = 'size-xl' if row.idx == 0 else ('size-l' if row.idx in [1, 2] else '') %}
+  <li class="item {% if it['override'] %}override{% endif %} {{ _sizeclass }}" data-src="{{ it['source_type'] }}" style="--heat: {{ _heat }}">
+    <div class="score" title="Dringlichkeit 0-100 (Sortierung zusaetzlich nach Prioritaet und Aktualitaet)">{{ '%.0f' % _urg }}</div>
+    <div class="body">
+      <div class="meta">
+        <span class="group">{{ it["group_name"] }}</span>
+        <span class="src">{{ ico.source_icon(it["source_type"]) }} {{ ico.source_label(it["source_type"]) }}</span>
+        {% if it["sender"] %}<span class="sender">{{ it["sender"] }}</span>{% endif %}
+        {% if it["override"] %}<span class="badge">Eskalation</span>{% endif %}
+        {% if it["ts_source"] %}<span class="when" title="{{ it['ts_source']|dt }}">{{ it['ts_source']|dt }} · {{ it['ts_source']|ago }}</span>{% endif %}
+      </div>
+      <div class="title">
+        {% if it["url"] %}<a href="{{ it['url'] }}" target="_blank" rel="noopener">{{ it["title"] or "(ohne Titel)" }}</a>
+        {% else %}{{ it["title"] or "(ohne Titel)" }}{% endif %}
+      </div>
+      {% if it["body"] %}<div class="snippet">{{ it["body"][:200] }}</div>{% endif %}
+      {% if it["reason"] %}<div class="reason">{{ it["reason"] }}</div>{% endif %}
+      <div class="ack-row">
+        {% if it["source_type"] in ("chat", "groupchat") and it["url"] %}
+        {# Inline-Antwort: direkt aus der Karte in die Chat-Outbox schreiben.
+           Ohne JS faellt das Formular auf den normalen Redirect nach /c/<jid> zurueck. #}
+        <form class="inline-reply" method="post" action="{{ it['url'] }}/send">
+          <input type="text" name="body" placeholder="Direkt antworten…" autocomplete="off" maxlength="2000">
+          <button type="submit" title="Antwort senden">➤</button>
+          <span class="ir-ok" hidden>✓ gesendet</span>
+        </form>
+        {% endif %}
+        {# Bestaetigen: Item ausblenden UND von der Bewertung ausnehmen (setzt done).
+           Die quellbasierte Auto-Reconciliation bleibt davon unberuehrt. #}
+        <form method="post" action="/items/{{ it['id'] }}/action">
+          <input type="hidden" name="action" value="done">
+          <button class="ack-btn" title="Bestaetigen: ausblenden und nicht mehr bewerten">✓ Bestaetigen</button>
+        </form>
+      </div>
+    </div>
+    {# Ring-Gauge: nur in der Signalfeld-Ansicht sichtbar (CSS). #}
+    <div class="gauge {{ _heatclass }}" aria-hidden="true"><span class="n">{{ '%.0f' % _urg }}</span></div>
+  </li>
+  {% endif %}
+  {% endfor %}
+</ul>
+
+{% if items %}
+<p class="muted">Eintraege verschwinden automatisch, sobald du sie in der Quelle bearbeitest
+(z.B. Mail lesen/verschieben). Kein Abhaken noetig. Aktualisiert sich alle 60 s.</p>
+{% endif %}
+</div>{# /dash-main #}
+
+{# Chatleiste: einklappbare Seitenleiste; Inhalt kommt per JS aus /api/conversations. #}
+<aside class="chatbar" id="chatbar" aria-label="Chat">
+  <div class="cb-head">
+    <button type="button" class="cb-toggle" id="cb-toggle" title="Chatleiste ein-/ausklappen" aria-label="Chatleiste umschalten">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="cb-badge" id="cb-badge" hidden></span>
+    </button>
+    <span class="cb-title">Chat</span>
+    <a class="cb-open" href="/chat" title="Chat-Seite oeffnen">&#x2922;</a>
+  </div>
+  <div class="cb-list" id="cb-list"><p class="muted cb-hint">Lade Konversationen …</p></div>
+  <div class="cb-conv" id="cb-conv" hidden>
+    <div class="cb-conv-head">
+      <button type="button" class="cb-back" id="cb-back" title="Zurueck zur Liste">&#x2190;</button>
+      <span class="cb-conv-name" id="cb-conv-name"></span>
+      <a class="cb-open" id="cb-conv-link" href="/chat" title="Konversation gross oeffnen">&#x2922;</a>
+    </div>
+    <div class="cb-msgs" id="cb-msgs"></div>
+    <form class="cb-send" id="cb-send">
+      <input type="text" id="cb-input" placeholder="Nachricht…" autocomplete="off" maxlength="2000">
+      <button type="submit" title="Senden">➤</button>
+    </form>
+  </div>
+</aside>
+</div>{# /dash-wrap #}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="grafana">
+  <div class="grafana-head">
+    <h1>Grafana</h1>
+    <form method="get" action="/grafana" class="path-form">
+      <input type="text" name="d" placeholder="/d/<dashboard-uid>/name?kiosk" >
+      <button class="btn-small" type="submit">Anzeigen</button>
+    </form>
+  </div>
+  {% if embed_url %}
+    {# Eingebettet per iframe. Die nginx-CSP (frame-src) beschraenkt zusaetzlich auf die
+       interne Grafana-Instanz. compass veraendert keine Grafana-Objekte (read-only). #}
+    <iframe class="grafana-frame" src="{{ embed_url }}" title="Grafana-Dashboard"></iframe>
+  {% else %}
+    <p class="empty">Keine Grafana-Instanz konfiguriert. In <code>config.yaml</code> unter
+      <code>grafana.base_url</code> die interne Grafana-URL eintragen (identisch zur
+      <code>frame-src</code> in der nginx-CSP).</p>
+  {% endif %}
+</section>
+{% endblock %}

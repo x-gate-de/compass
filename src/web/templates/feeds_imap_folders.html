@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="wizard">
+  <h1>IMAP-Ordner auswaehlen</h1>
+  <p class="muted">Nur die angehakten Ordner werden gelesen (read-only).</p>
+  <form method="post" action="/feeds/imap/create">
+    {% for k in ['group_id','name','priority','host','port','username','password','poll_interval'] %}
+      <input type="hidden" name="{{ k }}" value="{{ form[k] }}">
+    {% endfor %}
+    <input type="hidden" name="ssl" value="{{ 'on' if form['ssl'] else '' }}">
+    <input type="hidden" name="tls_verify" value="{{ 'on' if form['tls_verify'] else '' }}">
+    <ul class="pick-list">
+      {% for f in folders %}
+      <li><label><input type="checkbox" name="folders" value="{{ f['id'] }}"> {{ f['label'] }}</label></li>
+      {% else %}
+      <li class="empty">Keine Ordner gefunden.</li>
+      {% endfor %}
+    </ul>
+    <button class="btn" type="submit">Mail-Feed anlegen</button>
+    <a class="btn-small" href="/feeds">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

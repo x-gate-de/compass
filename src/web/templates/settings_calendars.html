@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}compass — Kalender zuordnen{% endblock %}
+{% block content %}
+<section class="feeds-admin">
+  <h1>Kalender den Funktionen zuordnen</h1>
+  <p class="muted">Je Kalender festlegen, wofuer compass ihn nutzt:
+    <b>Abwesenheiten</b> (NICHT-DA-Anzeige mit Grund), <b>Rufbereitschaft</b>
+    (aktuelle Schicht im ZEIT-Band), <b>Sonstiges</b> (nur einsammeln, fuer
+    kuenftige Module) oder <b>nicht verwenden</b>.</p>
+  <form method="post" action="/settings/calendar/assign" class="box">
+    <input type="hidden" name="count" value="{{ calendars|length }}">
+    <ul class="feedlist">
+      {% for c in calendars %}
+      <li>
+        <input type="hidden" name="path_{{ loop.index0 }}" value="{{ c.path }}">
+        <input type="hidden" name="name_{{ loop.index0 }}" value="{{ c.name }}">
+        <span class="fname">{{ c.name }}</span>
+        <span class="muted">{{ c.path }}</span>
+        {% set cur = assigned.get(c.path, 'ignore') %}
+        <select name="role_{{ loop.index0 }}">
+          <option value="ignore" {{ 'selected' if cur == 'ignore' else '' }}>nicht verwenden</option>
+          <option value="absence" {{ 'selected' if cur == 'absence' else '' }}>Abwesenheiten</option>
+          <option value="oncall" {{ 'selected' if cur == 'oncall' else '' }}>Rufbereitschaft</option>
+          <option value="other" {{ 'selected' if cur == 'other' else '' }}>Sonstiges (sammeln)</option>
+        </select>
+      </li>
+      {% else %}
+      <li class="empty">Keine Kalender gefunden.</li>
+      {% endfor %}
+    </ul>
+    <div style="display:flex; gap:.5rem; margin-top:.6rem;">
+      <button class="btn-small" type="submit">Zuordnung speichern</button>
+      <a class="btn-small" href="/settings">Abbrechen</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

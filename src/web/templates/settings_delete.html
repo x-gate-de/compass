@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}compass — Konto loeschen{% endblock %}
+{% block content %}
+<section class="feeds-admin">
+  <h1>Konto und alle Daten loeschen</h1>
+  <div class="box">
+    <p><b>{{ account_jid }}</b> — diese Aktion entfernt unwiderruflich:</p>
+    <ul>
+      <li>das komplette Nachrichtenarchiv (entschluesselte Chats, Anhaenge-Verweise)</li>
+      <li>den OMEMO-Geraeteschluessel dieses Servers (Forward Secrecy bleibt gewahrt)</li>
+      <li>alle NextUp-Daten (Feeds, Gruppen, Bewertungen, Grafana-Panels)</li>
+      <li>Push-Abos und gespeicherte Zugangsdaten</li>
+    </ul>
+    <p class="muted">Dein XMPP-Konto auf dem Chat-Server selbst bleibt bestehen —
+      es geht nur um die Daten in compass. Die Loeschung fuehrt der Daemon
+      innerhalb weniger Sekunden aus; danach ist ein neuer Login wie beim
+      ersten Mal (leeres Archiv, neues OMEMO-Geraet).</p>
+    <form method="post" action="/settings/delete" style="display:flex; gap:.6rem; margin-top:.8rem;">
+      <button class="btn-small" style="border-color: var(--danger); color: var(--danger);" type="submit">
+        Ja, endgueltig loeschen
+      </button>
+      <a class="btn-small" href="/">Abbrechen</a>
+    </form>
+  </div>
+</section>
+{% endblock %}

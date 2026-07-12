@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="chat-list">
+  <div class="chat-head">
+    <h1>Chat</h1>
+    <div class="chat-links">
+      <a class="btn-small" href="/contacts">Kontakte</a>
+      <a class="btn-small" href="/rooms">Raeume</a>
+      <form method="get" action="/search" class="inline">
+        <input type="search" name="q" placeholder="Archiv durchsuchen" minlength="2">
+      </form>
+    </div>
+  </div>
+  <form method="post" action="/new" class="new-conv">
+    <input type="text" name="partner" placeholder="Neue Konversation: JID (name@example.com)" required>
+    <button class="btn-small" type="submit">Oeffnen</button>
+  </form>
+  {% if not items %}<p class="empty">Noch keine Konversationen im Archiv.</p>{% endif %}
+  <ul class="convs">
+    {% for it in items %}
+    <li>
+      <a href="/c/{{ it['partner'] }}" class="conv">
+        <span class="ava" style="--h: {{ it['hue'] }}">{% if it['has_avatar'] %}<img class="ava-img" src="/avatar/{{ it['partner'] }}" alt="">{% else %}{{ it['initials'] }}{% endif %}</span>
+        <span class="conv-main">
+          <span class="conv-top">
+            <b>{{ it['name'] }}</b>
+            {% if it['is_room'] %}<span class="tag">Raum</span>{% endif %}
+            {% if it['unread'] %}<span class="unread">{{ it['unread'] }}</span>{% endif %}
+          </span>
+          <span class="conv-prev">{{ it['preview'] }}</span>
+        </span>
+        <span class="conv-time">{{ it['last'] }}</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

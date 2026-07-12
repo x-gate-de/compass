@@ -1,0 +1,136 @@
+# -----------------------------------------------------------------------------
+# Datei: config.yaml.example
+# Autor: Torben <github@x-gate.de>
+# Lizenz: AGPL-3.0-or-later — siehe LICENSE.
+# Zweck:
+# - Beispielkonfiguration (Multi-User) fuer compass. Ohne Secrets versioniert.
+#   Vereint die Bereiche Chat (XMPP/OMEMO), NextUp (Aggregator/LLM) und Grafana.
+# Betriebs- und Wartungshinweise:
+# - Diese Datei nach `config.yaml` kopieren und ausfuellen. Rechte: chmod 0600.
+# - Nutzer-/Feed-Zugangsdaten kommen NICHT aus dieser Datei, sondern verschluesselt
+#   aus der DB (Eingabe ueber Web-Login bzw. Feed-Verwaltung).
+# - security.fernet_key:     python3 -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"
+# - security.session_secret: python3 -c "import secrets;print(secrets.token_urlsafe(48))"
+# -----------------------------------------------------------------------------
+
+web:
+  bind_host: "127.0.0.1"
+  # Eigener Port neben chat (8080) und nextup (8090).
+  bind_port: 8100
+  base_path: "/"
+  # true, sobald hinter TLS erreichbar (Secure-Flag der Session-Cookies).
+  session_https_only: true
+
+# --- Chat (XMPP/OMEMO) ---
+xmpp:
+  # Beim Login vorbelegter Server (ueberschreibbar). Leer = DNS-SRV der JID-Domain.
+  default_host: "xmpp.example.com"
+  default_port: 5222
+  # Ressourcenname, unter dem ein Account-Daemon erscheint.
+  resource: "compass"
+  tls_verify: true
+  # Watchdog-Kadenz (Sekunden): Reconnect des BESTEHENDEN Bots (kein zweiter Bot pro Resource).
+  reconnect_after_seconds: 60
+  # Nur Logins fuer diese JID-Domains zulassen (Liste). Leer = alle erlaubt.
+  allowed_domains: []
+
+omemo:
+  # Trust-Politik: "btbv" (Blind Trust Before Verification) oder "manual".
+  trust_policy: "btbv"
+
+accounts:
+  # Registry der Accounts (verschluesselte Passwoerter) und je-Account-Daten.
+  db_path: "/var/lib/compass/accounts.db"
+  users_dir: "/var/lib/compass/users"
+
+database:
+  # Zentrale SQLite (WAL) fuer den Aggregator-Bestand (Items/Scores, je user_id getrennt).
+  path: "/var/lib/compass/compass.db"
+
+security:
+  # Fernet-Schluessel fuer gespeicherte XMPP-Passwoerter und Feed-Credentials.
+  # Verlust = gespeicherte Zugangsdaten nicht mehr entschluesselbar.
+  fernet_key: "HIER-FERNET-KEY-EINTRAGEN"
+  # Schluessel zum Signieren der Web-Session-Cookies.
+  session_secret: "HIER-SESSION-SECRET-EINTRAGEN"
+  # Login-Bremse (Brute-Force-Schutz):
+  login_window: 300        # Beobachtungsfenster je IP (Sekunden)
+  login_max_per_ip: 5      # max. Fehlversuche je IP im Fenster
+  validation_window: 60    # Fenster fuer XMPP-Validierungen (Sekunden)
+  validation_max: 5        # max. XMPP-Validierungen pro Fenster (global)
+
+# --- NextUp (Aggregation + LLM-Bewertung) ---
+llm:
+  # Bewertungs-Backend. "ollama" (default) oder "openai_compatible".
+  backend: "ollama"
+  # Basis-URL des LLM-Dienstes (eigenes, internes Ollama - keine externen Anbieter).
+  base_url: "http://127.0.0.1:11434"
+  model: "llama3.1"
+  api_key: ""              # nur fuer openai_compatible; bei Ollama leer
+  tls_verify: true
+  request_timeout: 60
+
+scoring:
+  rescore_interval: 0      # 0 = nur bei Inhalts-/Prioritaetsaenderung neu bewerten
+  override_threshold: 90   # ab diesem urgency-Wert darf das Override hochstufen
+  override_floor: 1000     # Mindest-final_score bei aktivem Override
+  time_decay_enabled: true
+  decay_tick: 300
+  score_tick: 60
+  rerank_enabled: true
+  rerank_top_n: 10
+  rerank_interval: 600
+  rerank_timeout: 240
+
+retention:
+  done_age: 604800         # erledigte Items: 7 Tage
+  due_grace: 86400         # terminbezogene Items: ts_due + 1 Tag
+  news_age: 1209600        # News/RSS: 14 Tage
+  default_age: 2592000     # sonstige offene Items: 30 Tage
+
+polling:
+  default_interval: 3600   # Default-Poll-Intervall je Feed (Sekunden)
+  error_backoff_start: 60
+  error_backoff_max: 3600
+  commands_tick: 5         # Takt der "jetzt synchronisieren"-Anstoesse
+
+# --- News-Ticker (Odoo-HelpDesk-Teams -> LLM-Schlagzeile als Laufband) ---
+ticker:
+  interval: 600            # Zyklus in Sekunden (Odoo-Abruf + LLM je Team)
+  max_tickets: 30          # Prompt-Deckel: Top-N Tickets je Team (Ollama ist langsam)
+  timeout: 480             # LLM-Timeout je Schlagzeile (Sekunden)
+
+# --- Arbeitszeit-Laufband (interne Zeiterfassung phatman, read-only) ---
+worktime:
+  # Basis-URL der API (z.B. https://timetracking.example.com/api/v1). Leer = Band aus.
+  base_url: ""
+  # API-Key (Header X-PHATMAN-AUTH). GEHEIM - nur in der echten config.yaml (0600).
+  api_key: ""
+  interval: 300            # Abruf-Zyklus in Sekunden
+  timeout: 30
+  tls_verify: true
+
+# --- Grafana-Anzeige (Einbettung per iframe/Embed) ---
+grafana:
+  # Basis-URL der internen Grafana-Instanz. Muss zur CSP frame-src im nginx passen.
+  base_url: "https://grafana.example.com"
+  # Optionaler API-Token (nur falls fuer Embed/Snapshot noetig). GEHEIM.
+  # Read-only-Rolle verwenden; compass veraendert keine Grafana-Objekte.
+  api_token: ""
+  tls_verify: true
+  request_timeout: 30
+
+# Web Push (optional). Leer lassen = Push deaktiviert.
+# Schluessel erzeugen: ./venv/bin/python -m scripts.gen_vapid  (schreibt in config.yaml)
+push:
+  vapid_subject: "mailto:admin@example.com"
+  vapid_public_key: ""     # Application Server Key (base64url) - nicht geheim
+  vapid_private_key: ""     # EC-Private-Key (PEM) - GEHEIM, nur auf dem Server
+
+debug:
+  capture_llm: true        # LLM-Ein-/Ausgabe je Item im Web-Debug-Log mitschneiden
+  max_events: 1000
+
+logging:
+  level: "INFO"
+  file: "/var/log/compass/compass.log"

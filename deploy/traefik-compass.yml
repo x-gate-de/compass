@@ -1,0 +1,48 @@
+# /etc/traefik/dynamic/compass.yml
+# Backend: 192.0.2.10:80 (HTTP, SSL-Terminierung via Traefik)
+# HTTP: nur Redirect auf HTTPS (keine ipAllowList, damit LE-Challenge funktioniert)
+# compass.example.com -> intern beschraenkt (compass-ipallowlist + crowdsec).
+# Begruendung: compass buendelt sensible Inhalte (Chat/Mail/Tickets/Kalender/Monitoring)
+# und Zugangsdaten zu mehreren Backends -> kein oeffentlicher Zugriff.
+# Diese Datei nach /etc/traefik/dynamic/compass.yml auf traefik.example.com kopieren.
+http:
+  routers:
+    compass_http:
+      rule: "Host(`compass.example.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - compass-redirect
+      service: compass
+
+    compass:
+      rule: "Host(`compass.example.com`)"
+      entryPoints:
+        - websecure
+      service: compass
+      middlewares:
+        - compass-ipallowlist
+        - crowdsec
+      tls:
+        certResolver: le
+
+  middlewares:
+    compass-ipallowlist:
+      ipAllowList:
+        # Nur zugelassene Quell-Netze erreichen compass. Hier die eigenen internen
+        # und Buero-/Public-Ranges eintragen (die reale Liste lebt in der laufenden
+        # traefik-Config auf dem Host, nicht in dieser versionierten Vorlage).
+        sourceRange:
+          - "10.0.0.0/8"          # internes Netz (RFC 1918)
+          - "203.0.113.0/24"      # Platzhalter: eigene Public-Range eintragen
+
+    compass-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    compass:
+      loadBalancer:
+        servers:
+          - url: "http://192.0.2.10"

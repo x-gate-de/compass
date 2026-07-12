@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="feed-edit">
+  <h1>Feed bearbeiten: {{ feed['name'] }}</h1>
+  {% if msg %}<div class="msg info">{{ msg }}</div>{% endif %}
+  {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
+  <p class="muted">Typ: {{ feed['connector_type'] }} · <a href="/feeds">zurueck</a></p>
+
+  <h2>Einstellungen</h2>
+  <form method="post" action="/feeds/{{ feed['id'] }}/settings" class="grid">
+    <label>Name <input name="name" value="{{ feed['name'] }}" required></label>
+    <label>Prioritaet <input type="number" name="priority" value="{{ feed['priority'] }}" min="1" max="5"></label>
+    <label>Poll-Intervall (s, 0=Default) <input type="number" name="poll_interval" value="{{ feed['poll_interval'] or 0 }}"></label>
+    <label class="chk"><input type="checkbox" name="enabled" {{ 'checked' if feed['enabled'] else '' }}> aktiv</label>
+    <label class="chk"><input type="checkbox" name="llm_scoring" {{ 'checked' if feed['llm_scoring'] else '' }}> LLM-Bewertung</label>
+    <button class="btn-small" type="submit">Speichern</button>
+  </form>
+
+  {% if feed['connector_type'] in ('imap','caldav') %}
+  <h2>Quelle</h2>
+  {% if discover_error %}<div class="msg error">Auswahl konnte nicht geladen werden: {{ discover_error }}</div>{% endif %}
+  <form method="post" action="/feeds/{{ feed['id'] }}/config">
+    <p class="muted">Passwort leer lassen = unveraendert.</p>
+    <label>Passwort (neu) <input type="password" name="password"></label>
+    {% if selectable %}
+    <ul class="pick-list">
+      {% for s in selectable %}
+      <li><label><input type="checkbox"
+        name="{{ 'folders' if feed['connector_type']=='imap' else 'calendars' }}"
+        value="{{ s['id'] }}" {{ 'checked' if s['id'] in selected else '' }}> {{ s['label'] }}</label></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <button class="btn-small" type="submit">Konfiguration speichern</button>
+  </form>
+  {% elif feed['connector_type'] == 'chat' %}
+  <h2>Quelle</h2>
+  <form method="post" action="/feeds/{{ feed['id'] }}/config" class="grid">
+    <label>Partner <input value="{{ cfg.get('partner','') }}" disabled></label>
+    <label>Max. Alter (h) <input type="number" name="max_age_hours" value="{{ cfg.get('max_age_hours', 24) }}"></label>
+    <button class="btn-small" type="submit">Speichern</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

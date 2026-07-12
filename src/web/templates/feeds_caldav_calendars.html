@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="wizard">
+  <h1>Kalender auswaehlen</h1>
+  <p class="muted">Anstehende Termine der angehakten Kalender werden gelesen (read-only).</p>
+  <form method="post" action="/feeds/caldav/create">
+    {% for k in ['group_id','name','priority','url','username','password','window_days','poll_interval'] %}
+      <input type="hidden" name="{{ k }}" value="{{ form[k] }}">
+    {% endfor %}
+    <input type="hidden" name="tls_verify" value="{{ 'on' if form['tls_verify'] else '' }}">
+    <ul class="pick-list">
+      {% for c in calendars %}
+      <li><label><input type="checkbox" name="calendars" value="{{ c['id'] }}"> {{ c['label'] }}</label></li>
+      {% else %}
+      <li class="empty">Keine Kalender gefunden.</li>
+      {% endfor %}
+    </ul>
+    <button class="btn" type="submit">Kalender-Feed anlegen</button>
+    <a class="btn-small" href="/feeds">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

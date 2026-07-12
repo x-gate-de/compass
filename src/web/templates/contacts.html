@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="contacts">
+  <h1>Kontakte</h1>
+  {% if not items %}<p class="empty">Keine Kontakte im Roster.</p>{% endif %}
+  <ul class="convs">
+    {% for it in items %}
+    <li>
+      <a href="/c/{{ it['jid'] }}" class="conv">
+        <span class="ava" style="--h: {{ it['hue'] }}">{% if it['has_avatar'] %}<img class="ava-img" src="/avatar/{{ it['jid'] }}" alt="">{% else %}{{ it['initials'] }}{% endif %}</span>
+        <span class="conv-main"><b>{{ it['name'] }}</b><span class="conv-prev">{{ it['jid'] }}</span></span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

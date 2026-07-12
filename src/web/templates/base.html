@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}compass{% endblock %}</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="compass">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <!-- Design vor dem Paint setzen (kein Aufflackern). ?v= erzwingt frische
+       Assets nach Deployments (kein manueller Hard-Reload mehr noetig). -->
+  <script src="/static/theme.js?v={{ app_version }}"></script>
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="/static/style.css?v={{ app_version }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+    <a class="brand" href="/" aria-label="compass">
+      <svg class="brand-mark" viewBox="0 0 28 28" width="26" height="26" aria-hidden="true">
+        <rect width="28" height="28" rx="7" fill="currentColor"/>
+        <circle cx="14" cy="14" r="8" fill="none" stroke="#fff" stroke-width="1.6" opacity=".55"/>
+        <path d="M14 8l2.4 5.6L14 20l-2.4-6.4z" fill="#fff"/>
+      </svg>
+      <span class="brand-text">com<span class="brand-up">pass</span></span>
+    </a>
+    {# Hauptziele direkt neben dem Logo: Dashboard (= Logo-Ziel) und Chat. #}
+    <nav class="mainnav">
+      <a href="/" class="{{ 'active' if nav_active == 'nextup' else '' }}">Dashboard</a>
+      <a href="/chat" class="{{ 'active' if nav_active == 'chat' else '' }}">Chat</a>
+    </nav>
+    </div>
+    <div class="topbar-right">
+      {# Seiten koennen hier eine kompakte Status-Anzeige einblenden (NextUp: Daemon-Stand). #}
+      {% block topstatus %}{% endblock %}
+      <nav class="mainnav">
+        <a href="/status" class="{{ 'active' if nav_active == 'status' else '' }}">Status</a>
+      </nav>
+      {% if account_jid %}
+      <span class="acc">
+        {# Klick auf den Status schaltet "immer online" (Daemon-Verbindung) um. #}
+        <form class="inline" method="post" action="/account/online">
+          <button type="submit" class="state state-btn {{ account_state.cls }}"
+                  title="Klick: Hintergrund-Verbindung {{ 'trennen' if account_state.enabled else 'aktivieren' }}">{{ account_state.label }}</button>
+        </form>
+        <span class="jid">{{ account_jid }}</span>
+        <form class="inline" method="post" action="/logout"><button type="submit" class="link">Logout</button></form>
+      </span>
+      {% endif %}
+      <details class="design-menu">
+        <summary class="design-btn" title="Einstellungen" aria-label="Einstellungen">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </summary>
+        <div class="design-panel">
+          <a class="design-link" href="/settings">
+            Alle Einstellungen <span class="design-link-arrow">&rarr;</span>
+          </a>
+          <div class="design-title">Darstellung (Schnellzugriff)</div>
+          <div class="design-row">
+            <span class="design-label">Modus</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-theme-set="auto">Auto</button>
+              <button type="button" class="design-mode" data-theme-set="light">Hell</button>
+              <button type="button" class="design-mode" data-theme-set="dark">Dunkel</button>
+            </div>
+          </div>
+          <div class="design-row">
+            <span class="design-label">Farbe</span>
+            <div class="design-opts">
+              <button type="button" class="swatch" data-accent-set="blue" style="--sw:#2563eb" title="Blau" aria-label="Blau"></button>
+              <button type="button" class="swatch" data-accent-set="teal" style="--sw:#0d9488" title="Petrol" aria-label="Petrol"></button>
+              <button type="button" class="swatch" data-accent-set="green" style="--sw:#1e7e45" title="Gruen" aria-label="Gruen"></button>
+              <button type="button" class="swatch" data-accent-set="purple" style="--sw:#7c4dff" title="Violett" aria-label="Violett"></button>
+              <button type="button" class="swatch" data-accent-set="orange" style="--sw:#ea580c" title="Orange" aria-label="Orange"></button>
+              <button type="button" class="swatch" data-accent-set="red" style="--sw:#c0392b" title="Rot" aria-label="Rot"></button>
+            </div>
+          </div>
+          <div class="design-row">
+            <span class="design-label">Dichte</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-density-set="comfortable">Komfort</button>
+              <button type="button" class="design-mode" data-density-set="compact">Kompakt</button>
+            </div>
+          </div>
+          <div class="design-row">
+            <span class="design-label">Ansicht (NextUp)</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-view-set="list">Liste</button>
+              <button type="button" class="design-mode" data-view-set="grid">Raster</button>
+              <button type="button" class="design-mode" data-view-set="signal">Signalfeld</button>
+            </div>
+          </div>
+          <div class="design-row">
+            <span class="design-label">Zeilen (Vorschau)</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-lines-set="0">Aus</button>
+              <button type="button" class="design-mode" data-lines-set="1">1</button>
+              <button type="button" class="design-mode" data-lines-set="2">2</button>
+              <button type="button" class="design-mode" data-lines-set="3">3</button>
+              <button type="button" class="design-mode" data-lines-set="5">5</button>
+            </div>
+          </div>
+          <div class="design-row" data-grid-only>
+            <span class="design-label">Spalten</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-cols-set="auto">Auto</button>
+              <button type="button" class="design-mode" data-cols-set="2">2</button>
+              <button type="button" class="design-mode" data-cols-set="3">3</button>
+              <button type="button" class="design-mode" data-cols-set="4">4</button>
+            </div>
+          </div>
+          <div class="design-row">
+            <span class="design-label">Max. Eintraege</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-max-set="10">10</button>
+              <button type="button" class="design-mode" data-max-set="20">20</button>
+              <button type="button" class="design-mode" data-max-set="30">30</button>
+              <button type="button" class="design-mode" data-max-set="50">50</button>
+              <button type="button" class="design-mode" data-max-set="0">Alle</button>
+            </div>
+          </div>
+          <div class="design-row" data-signal-only>
+            <span class="design-label">Boxen Reihe 1</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-r1-set="1">1</button>
+              <button type="button" class="design-mode" data-r1-set="2">2</button>
+              <button type="button" class="design-mode" data-r1-set="3">3</button>
+              <button type="button" class="design-mode" data-r1-set="4">4</button>
+              <button type="button" class="design-mode" data-r1-set="6">6</button>
+            </div>
+          </div>
+          <div class="design-row" data-signal-only>
+            <span class="design-label">Boxen Reihe 2</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-r2-set="1">1</button>
+              <button type="button" class="design-mode" data-r2-set="2">2</button>
+              <button type="button" class="design-mode" data-r2-set="3">3</button>
+              <button type="button" class="design-mode" data-r2-set="4">4</button>
+              <button type="button" class="design-mode" data-r2-set="6">6</button>
+            </div>
+          </div>
+          <div class="design-row" data-signal-only>
+            <span class="design-label">Boxen Reihe 3</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-r3-set="1">1</button>
+              <button type="button" class="design-mode" data-r3-set="2">2</button>
+              <button type="button" class="design-mode" data-r3-set="3">3</button>
+              <button type="button" class="design-mode" data-r3-set="4">4</button>
+              <button type="button" class="design-mode" data-r3-set="6">6</button>
+            </div>
+          </div>
+          <div class="design-row" data-signal-only>
+            <span class="design-label">Boxen weitere Reihen</span>
+            <div class="design-opts">
+              <button type="button" class="design-mode" data-rn-set="1">1</button>
+              <button type="button" class="design-mode" data-rn-set="2">2</button>
+              <button type="button" class="design-mode" data-rn-set="3">3</button>
+              <button type="button" class="design-mode" data-rn-set="4">4</button>
+              <button type="button" class="design-mode" data-rn-set="6">6</button>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

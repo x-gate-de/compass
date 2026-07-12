@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="status">
+  <h1>Status</h1>
+  {% if msg %}<div class="msg info">{{ msg }}</div>{% endif %}
+  <div class="counters">
+    <span>{{ st.totals.items }} Items</span>
+    <span>{{ st.totals.scored }} bewertet</span>
+    <span>{{ st.totals.open_unscored }} offen</span>
+    <span>{{ st.totals.done }} erledigt</span>
+    <span>letzte Aktivitaet: {{ st.last_event | ago }}</span>
+  </div>
+
+  <h2>Feeds</h2>
+  <table class="feeds">
+    <thead><tr><th>Name</th><th>Typ</th><th>Status</th><th>Items</th><th>bewertet</th><th>naechster Poll</th></tr></thead>
+    <tbody>
+      {% for f in st.feeds %}
+      <tr>
+        <td>{{ f['name'] }}</td>
+        <td>{{ f['connector_type'] }}</td>
+        <td class="s-{{ f['status'] }}">{{ f['status'] }}{% if f['status_detail'] %} ({{ f['status_detail'] }}){% endif %}</td>
+        <td>{{ f['items'] }}</td>
+        <td>{{ f['scored'] }}</td>
+        <td>{{ f['next_poll_ts'] | ago }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="empty">Noch keine Feeds.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Protokoll</h2>
+  <div class="dbg-filter">
+    <a href="/status" class="chip {{ 'active' if not active_dbg else '' }}">Alle</a>
+    {% for k in ['poll','llm','sync','error'] %}
+      <a href="/status?dbg={{ k }}" class="chip {{ 'active' if active_dbg == k else '' }}">{{ k }}</a>
+    {% endfor %}
+  </div>
+  <ul class="events">
+    {% for e in events %}
+      <li class="ev ev-{{ e['kind'] }}"><span class="ts">{{ e['ts'] | dt }}</span>
+        <span class="kind">{{ e['kind'] }}</span> {{ e['summary'] }}</li>
+    {% else %}
+      <li class="empty">Keine Ereignisse.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

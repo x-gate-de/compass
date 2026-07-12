@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="devices">
+  <div class="conv-head">
+    <a class="btn-small" href="/c/{{ partner }}">&larr;</a>
+    <h1>OMEMO-Geraete: {{ partner }}</h1>
+  </div>
+  <p class="muted">Fingerprints der Geraete. Verifizieren bestaetigt einen Schluessel;
+    Verwerfen sperrt ihn. Die Aenderung fuehrt der Daemon aus.</p>
+
+  <div id="devlist" data-partner="{{ partner }}">
+    {% for d in devices %}
+    <div class="dev {{ 'own' if d['is_own'] else '' }}">
+      <div class="dev-head">
+        <b>{{ 'Eigenes Geraet' if d['is_own'] else 'Kontakt' }}</b>
+        <span class="dev-id">#{{ d['device_id'] }}</span>
+        <span class="trust t-{{ d['trust'] }}">{{ d['trust'] }}</span>
+      </div>
+      <code class="fp">{{ d['fingerprint'] }}</code>
+      {% if not d['is_own'] %}
+      <div class="dev-actions">
+        <form method="post" action="/devices/{{ partner }}/trust" class="inline">
+          <input type="hidden" name="identity_hex" value="{{ d['identity_hex'] }}">
+          <input type="hidden" name="value" value="verify"><button class="btn-small">Verifizieren</button>
+        </form>
+        <form method="post" action="/devices/{{ partner }}/trust" class="inline">
+          <input type="hidden" name="identity_hex" value="{{ d['identity_hex'] }}">
+          <input type="hidden" name="value" value="distrust"><button class="btn-small">Verwerfen</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="empty">Noch keine Geraetedaten. Der Daemon laedt sie gerade — Seite in Kuerze neu laden.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

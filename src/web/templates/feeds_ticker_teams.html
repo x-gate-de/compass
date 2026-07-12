@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}compass — Ticker-Teams{% endblock %}
+{% block content %}
+<section class="feeds-admin">
+  <h1>News-Ticker: HelpDesk-Teams auswaehlen</h1>
+  <p class="muted">Maximal {{ max_teams }} Teams. Der Daemon holt zyklisch alle offenen und
+  in Bearbeitung befindlichen Tickets je Team und laesst das interne LLM eine
+  Top-Schlagzeile fuer das Laufband formulieren.</p>
+  <form method="post" action="/ticker/create" class="box">
+    {# Odoo-Zugang aus Schritt 1 unveraendert weiterreichen (wird verschluesselt gespeichert). #}
+    <input type="hidden" name="url" value="{{ form.url }}">
+    <input type="hidden" name="database" value="{{ form.database }}">
+    <input type="hidden" name="username" value="{{ form.username }}">
+    <input type="hidden" name="access_token" value="{{ form.access_token }}">
+    <input type="hidden" name="tls_verify" value="{{ 'on' if form.tls_verify else 'off' }}">
+    <ul class="feedlist">
+      {% for t in teams %}
+      <li>
+        <label class="chk">
+          <input type="checkbox" name="teams" value="{{ t.id }}|{{ t.name }}"
+                 {{ 'checked disabled' if t.id in existing else '' }}>
+          {{ t.name }}
+          {% if t.id in existing %}<span class="muted">(bereits im Ticker)</span>{% endif %}
+        </label>
+      </li>
+      {% else %}
+      <li class="empty">Keine HelpDesk-Teams gefunden.</li>
+      {% endfor %}
+    </ul>
+    <div style="display:flex; gap:.5rem; margin-top:.6rem;">
+      <button class="btn-small" type="submit">Teams uebernehmen</button>
+      <a class="btn-small" href="/settings">Abbrechen</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

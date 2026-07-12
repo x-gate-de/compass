@@ -1,0 +1,34 @@
+# -----------------------------------------------------------------------------
+# Datei: deploy/compass-web.service
+# Autor: Torben <github@x-gate.de>
+# Version: 1.0.0
+# Lizenz: AGPL-3.0-or-later — siehe LICENSE.
+# Zweck:
+# - systemd-Unit fuer die compass-Web-UI (uvicorn/FastAPI): Chat, NextUp, Grafana.
+# Betriebs- und Wartungshinweise:
+# - Lauscht lokal (127.0.0.1:8100); externer Zugriff ueber nginx-Reverse-Proxy/traefik.
+# -----------------------------------------------------------------------------
+
+[Unit]
+Description=compass - Web-UI (Chat / NextUp / Grafana)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=compass
+Group=compass
+WorkingDirectory=/opt/compass
+ExecStart=/opt/compass/venv/bin/python /opt/compass/run_web.py --config /opt/compass/config.yaml
+Restart=always
+RestartSec=5
+
+# Haertung
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/compass /var/log/compass
+
+[Install]
+WantedBy=multi-user.target
