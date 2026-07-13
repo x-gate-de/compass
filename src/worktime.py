@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/worktime.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.4.0
+# Version: 1.5.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Client fuer die Zeiterfassung (phatman-kompatible API, Header X-PHATMAN-AUTH): liest je
@@ -27,15 +27,26 @@
 import asyncio
 import datetime
 import logging
+import re
 import time
 
 import httpx
 
-from .calendar_feed import active_now, classify, covering_today, match_user, match_users
+from .calendar_feed import active_now, classify, covering_today, match_users
 
 logger = logging.getLogger(__name__)
 
 _CAL_KIND_LABEL = {"vacation": "Urlaub", "sick": "krank", "school": "Schule"}
+
+
+# Betreff ohne die bereits als Label gezeigten Mitarbeiter-Kuerzel; dient als
+# Grund-Text, wenn keine Kategorie (Urlaub/krank/...) erkannt wurde. Verhindert
+# die Kuerzel-Dopplung ("tzi tzi"), wenn der Betreff nur aus dem Kuerzel besteht.
+def _absence_reason(summary, hits):
+    rest = summary or ""
+    for h in hits:
+        rest = re.sub(r"(?i)\b%s\b" % re.escape(h), "", rest)
+    return re.sub(r"\s+", " ", rest).strip(" -+,/").strip()
 
 # Fehltage-Kategorien der Zeiterfassung -> kurze Anzeigenamen fuers Laufband.
 _ABSENCE_LABELS = {
@@ -229,10 +240,15 @@ def build_segments(payload, opts=None, cal=None):
                 continue
             if role and role != "absence":
                 continue  # "other"-Kalender nicht als Abwesenheit werten
-            who = match_user(e["summary"], names)
+            hits = match_users(e["summary"], names)
             reason = _CAL_KIND_LABEL.get(kind)
-            if who:
-                entries.append({"label": who, "text": reason or e["summary"], "kind": "plain"})
+            if hits:
+                # Grund: erkannte Kategorie (Urlaub/krank/Schule), sonst der Rest
+                # des Betreffs ohne die bereits als Label gezeigten Kuerzel.
+                # Besteht der Betreff nur aus dem Kuerzel, "abwesend" statt Dopplung.
+                text = reason or _absence_reason(e["summary"], hits) or "abwesend"
+                for who in hits:
+                    entries.append({"label": who, "text": text, "kind": "plain"})
             else:
                 entries.append({"label": "-", "text": e["summary"], "kind": "plain"})
         segs.extend(entries or [{"label": "-", "text": "alle da", "kind": "plain"}])

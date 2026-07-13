@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.2
+
+- **Worktime "away" band**: an employee's initials are no longer shown twice
+  ("tzi tzi"). When the calendar subject is just the initials, the reason now
+  reads "abwesend"; any other subject (e.g. "Homeoffice") is shown as the reason
+  without the initials. Combined entries ("cde+jhe") are listed per person.
+
 ## 1.1.1
 
 - **Calendar**: a SoGo/CalDAV collection link entered as a direct feed (a URL
