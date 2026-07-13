@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1
+
+- **Calendar**: a SoGo/CalDAV collection link entered as a direct feed (a URL
+  containing /dav/ and not ending in .ics) is now loaded via a CalDAV REPORT
+  instead of GET. SoGo answers GET on a collection with HTTP 501, which made
+  such feeds fail; plain .ics subscriptions are unchanged and still use GET.
+
 ## 1.1.0
 
 - **NOC design**: the dark theme is now a control-room terminal look —

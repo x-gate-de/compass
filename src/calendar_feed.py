@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/calendar_feed.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.1.0
+# Version: 1.2.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Kalender-Modul: laedt einen iCal-Feed (z.B. Abwesenheits-/Rufbereitschafts-
@@ -130,6 +130,11 @@ def collection_url(config, path):
 # Noetig, weil SoGo den .ics-Export nur fuer eigene Kalender anbietet; REPORT
 # funktioniert auch fuer abonnierte Sammlungen (z.B. Rufbereitschaft).
 def fetch_collection_events(config, path):
+    return _report_events(config, collection_url(config, path))
+
+
+# CalDAV-REPORT (calendar-query mit Zeitfenster) auf eine ABSOLUTE Sammlungs-URL.
+def _report_events(config, url):
     start = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=_WINDOW_PAST)
     end = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=_WINDOW_FUTURE)
     body = ('<?xml version="1.0"?>'
@@ -140,7 +145,7 @@ def fetch_collection_events(config, path):
             '</c:comp-filter></c:comp-filter></c:filter></c:calendar-query>'
             % (start.strftime("%Y%m%dT%H%M%SZ"), end.strftime("%Y%m%dT%H%M%SZ")))
     with _client(config) as client:
-        resp = client.request("REPORT", collection_url(config, path),
+        resp = client.request("REPORT", url,
                               headers={"Depth": "1", "Content-Type": "application/xml"},
                               content=body)
         resp.raise_for_status()
@@ -159,9 +164,20 @@ def fetch_collection_events(config, path):
 
 # Laedt und parst einen Feed. config: {url, username, password, tls_verify};
 # url_override holt eine bestimmte Sammlung (Zuordnungs-Betrieb).
+# Erkennt eine CalDAV-Sammlungs-URL (SoGo & Co.): DAV-Pfad, nicht auf .ics endend.
+# Solche URLs liefern per GET kein Einzeldokument (SoGo: HTTP 501) -> REPORT noetig.
+def _is_dav_collection(url):
+    path = urlsplit(url or "").path.lower()
+    return "/dav/" in path and not path.rstrip("/").endswith(".ics")
+
+
 def fetch_events(config, url_override=None):
+    url = url_override or config["url"]
+    # SoGo-/CalDAV-Sammlungs-URL im Direkt-Feed -> per REPORT statt GET holen.
+    if _is_dav_collection(url):
+        return _report_events(config, url if url.endswith("/") else url + "/")
     with _client(config) as client:
-        resp = client.get(url_override or config["url"])
+        resp = client.get(url)
         resp.raise_for_status()
         text = resp.text
     now = time.time()
