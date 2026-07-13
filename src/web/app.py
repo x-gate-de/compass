@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/web/app.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.3.0
+# Version: 1.4.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Vereinte compass-Web-UI (FastAPI): EIN Login (XMPP-Bind) und eine Navigations-Shell
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.6"
+APP_VERSION = "1.4.7"
 
 
 class NotAuthenticated(Exception):
@@ -917,9 +917,13 @@ def _register_routes(app):
         "r1": {"1", "2", "3", "4", "6"}, "r2": {"1", "2", "3", "4", "6"},
         "r3": {"1", "2", "3", "4", "6"}, "rn": {"1", "2", "3", "4", "6"},
         "max": {"0", "10", "20", "30", "50"},
+        # Schrift-/UI-Skalierung in Prozent: Wand-Displays werden aus Distanz gelesen,
+        # darum groessere Standardwerte. Alles ist rem-basiert -> skaliert komplett mit.
+        "scale": {"100", "125", "150", "175", "200", "250"},
     }
     _KIOSK_DEFAULT = {"theme": "dark", "accent": "green", "view": "signal", "lines": "1",
-                      "cols": "auto", "r1": "3", "r2": "4", "r3": "6", "rn": "6", "max": "0"}
+                      "cols": "auto", "r1": "3", "r2": "4", "r3": "6", "rn": "6", "max": "0",
+                      "scale": "150"}
 
     def _kiosk_cfg(conn):
         cfg = {k: store.get_setting(conn, "kiosk." + k, v) for k, v in _KIOSK_DEFAULT.items()}
@@ -987,10 +991,14 @@ def _register_routes(app):
         finally:
             conn.close()
         show_tk = k["tickers"]
-        return render("kiosk.html", k=k, items=dd["ranking"], stream=dd["stream"],
+        resp = render("kiosk.html", k=k, items=dd["ranking"], stream=dd["stream"],
                       ticker=(dd["ticker"] if show_tk else None),
                       wt_segments=(dd["wt_segments"] if show_tk else None),
                       wt=dd["wt_opts"], ticker_speed=dd["ticker_speed"])
+        # Display cached die Seite sonst und laedt nach Aenderungen (neue Bild-Route,
+        # Skalierung) die alte Fassung -> HTML nie cachen, Bilder haben eigenen Cache.
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
 
     # Panel-Bild fuers Kiosk-Display: dieselbe serverseitige Renderung wie im
     # Dashboard, aber token-authentifiziert. Das Display hat weder eine Session

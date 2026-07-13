@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4
+
+- **Kiosk readability**: a new "font size (distance)" setting (100-250 %) for the
+  wall display. As all sizes are rem-based, this scales the whole UI (tickers,
+  cards, gauges, panels) together. Default is now 150 %; from 200 % the card body
+  text/reason is hidden (title + score stay). The kiosk page is also no longer
+  cached (Cache-Control: no-store) so a display never keeps showing a stale version.
+
 ## 1.1.3
 
 - **Kiosk/Grafana**: office displays without their own Grafana access now get the

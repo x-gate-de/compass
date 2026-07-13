@@ -854,6 +854,22 @@ body.kiosk main.kiosk-main { max-width: none; margin: 0; padding: .5rem 1rem 1.2
 body.kiosk .ticker { margin: 0 0 .6rem; border-radius: 0; border-left: 0; border-right: 0; }
 body.kiosk .ticker:first-child { border-top: 0; }
 
+/* UI-Skalierung fuers Wand-Display: alle Groessen sind rem-basiert, daher genuegt
+   die Wurzel-Schriftgroesse, um Ticker, Karten, Gauges und Panels gemeinsam zu
+   vergroessern. Aus Distanz gelesene Displays brauchen deutlich mehr als 16px. */
+:root[data-kiosk="1"] { font-size: 16px; }
+:root[data-kiosk="1"][data-scale="125"] { font-size: 20px; }
+:root[data-kiosk="1"][data-scale="150"] { font-size: 24px; }
+:root[data-kiosk="1"][data-scale="175"] { font-size: 28px; }
+:root[data-kiosk="1"][data-scale="200"] { font-size: 32px; }
+:root[data-kiosk="1"][data-scale="250"] { font-size: 40px; }
+/* Bei starker Skalierung raubt Fliesstext den Ueberblick -> Karten auf das
+   Wesentliche eindampfen (Quelle, Titel, Score); Details bleiben am Desk-View. */
+:root[data-kiosk="1"][data-scale="200"] .item .snippet,
+:root[data-kiosk="1"][data-scale="250"] .item .snippet,
+:root[data-kiosk="1"][data-scale="200"] .item .reason,
+:root[data-kiosk="1"][data-scale="250"] .item .reason { display: none; }
+
 /* --- NOC-Design: Terminal-Signaturen (nur Dunkelmodus) ----------------------- */
 /* Feine Scanline ueber dem Grund — sehr dezent, gibt der Datenwand Textur. */
 :root[data-theme="dark"] body {
