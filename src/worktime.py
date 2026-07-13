@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/worktime.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.3.0
+# Version: 1.4.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Client fuer die Zeiterfassung (phatman-kompatible API, Header X-PHATMAN-AUTH): liest je
@@ -15,8 +15,8 @@
 # - build_segments(payload, opts): formatiert den Snapshot als Laufband-Segmente
 #   (JETZT / HEUTE / NICHT DA / WOCHE / FEHLTAGE <Jahr>). opts steuert Schwellwerte:
 #   max_vacation/max_sick faerben ueberschrittene Fehltage-Zahlen (Farbe waehlbar).
-# - "Heute nicht da": die API kennt keinen Tagesgrund -> Heuristik Werktag +
-#   Tages-Soll 0 + nichts gearbeitet (Urlaub/krank/frei nicht unterscheidbar).
+# - "Heute nicht da": NUR aus einem zugeordneten Abwesenheits-Kalender (echter
+#   Grund). Ohne solchen Kalender wird der Abschnitt weggelassen.
 # Betriebs- und Wartungshinweise:
 # - Read-only; API-Key kommt aus config.yaml (worktime.api_key, Rechte 0600).
 # - Maessige Parallelitaet (Semaphore 5), um die Zeiterfassung nicht zu fluten.
@@ -171,7 +171,7 @@ def _absence_parts(stats, opts):
 # Baut die Laufband-Segmente aus einem Snapshot: [{label, text|parts, kind}].
 # kind: head (Abschnittsueberschrift), active (gerade angemeldet), plain.
 # cal: optionaler Kalender-Snapshot (calendar_feed) -> RUFBEREITSCHAFT + NICHT DA
-# mit echtem Grund; ohne Kalender greift die Soll-0-Heuristik.
+# mit echtem Grund (Abwesenheits-Kalender); ohne solchen entfaellt NICHT DA.
 def build_segments(payload, opts=None, cal=None):
     if not payload or not payload.get("users"):
         if payload and payload.get("error"):
@@ -213,40 +213,28 @@ def build_segments(payload, opts=None, cal=None):
         segs.append({"label": "HEUTE", "text": "", "kind": "head"})
         for u in worked:
             segs.append({"label": u["name"], "text": _fmt_h(u["worked_s"]), "kind": "plain"})
-    # Heute nicht da: bevorzugt aus dem Abwesenheits-Kalender (echter Grund);
-    # ohne Kalender die Heuristik Tages-Soll 0 + nichts gearbeitet.
-    try:
-        weekday = datetime.date.fromisoformat(payload.get("date", "")).weekday()
-    except (TypeError, ValueError):
-        weekday = 6
-    # Kalender nur nutzen, wenn ein Abwesenheits-Kalender zugeordnet ist
-    # (sonst wuerde ein reiner Rufbereitschafts-Kalender "alle da" vortaeuschen).
+    # Heute nicht da: NUR aus einem zugeordneten Abwesenheits-Kalender (echter Grund).
+    # Die fruehere Soll-0-Heuristik ist raus -- sie hat Teilzeit-/Nicht-Arbeitstage
+    # (Tages-Soll 0) faelschlich als "abwesend" markiert. Ohne Abwesenheits-Kalender
+    # wird der Abschnitt weggelassen (kein Raten).
     has_absence_cal = any(f.get("role") == "absence" for f in cal_feeds) \
         or (cal_events and not cal_feeds)
-    # Mit echten Kalenderdaten immer zeigen (Urlaub laeuft auch am Wochenende);
-    # die Soll-0-Heuristik ist nur an Werktagen aussagekraeftig.
-    if has_absence_cal or weekday < 5:
+    if has_absence_cal:
         segs.append({"label": "NICHT DA", "text": "", "kind": "head"})
         entries = []
-        if has_absence_cal:
-            for e in covering_today(cal_events):
-                role = e.get("role")
-                kind = classify(e["summary"])
-                if role == "oncall" or (not role and kind == "oncall"):
-                    continue
-                if role and role != "absence":
-                    continue  # "other"-Kalender nicht als Abwesenheit werten
-                who = match_user(e["summary"], names)
-                reason = _CAL_KIND_LABEL.get(kind)
-                if who:
-                    entries.append({"label": who, "text": reason or e["summary"], "kind": "plain"})
-                else:
-                    entries.append({"label": "-", "text": e["summary"], "kind": "plain"})
-        else:
-            for u in users:
-                if not u.get("active") and (u.get("worked_s") or 0) == 0 \
-                        and (u.get("quota_s") or 0) == 0:
-                    entries.append({"label": u["name"], "text": "Urlaub/krank/frei", "kind": "plain"})
+        for e in covering_today(cal_events):
+            role = e.get("role")
+            kind = classify(e["summary"])
+            if role == "oncall" or (not role and kind == "oncall"):
+                continue
+            if role and role != "absence":
+                continue  # "other"-Kalender nicht als Abwesenheit werten
+            who = match_user(e["summary"], names)
+            reason = _CAL_KIND_LABEL.get(kind)
+            if who:
+                entries.append({"label": who, "text": reason or e["summary"], "kind": "plain"})
+            else:
+                entries.append({"label": "-", "text": e["summary"], "kind": "plain"})
         segs.extend(entries or [{"label": "-", "text": "alle da", "kind": "plain"}])
     # Wochensumme (Mo..heute) fuer alle mit Arbeitszeit in dieser Woche.
     week_users = [u for u in users if (u.get("week_s") or 0) > 0]
