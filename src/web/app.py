@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.4"
+APP_VERSION = "1.4.5"
 
 
 class NotAuthenticated(Exception):
@@ -810,12 +810,34 @@ def _register_routes(app):
     @app.post("/settings/tiles/{tile_id}/update")
     def tiles_update(request: Request, tile_id: int, title: str = Form(""),
                      position: int = Form(0), width: str = Form("4"), color: str = Form(""),
-                     acc: dict = Depends(require_account)):
+                     briefing_hour: int = Form(None), review_days: int = Form(None),
+                     review_exclude: str = Form(None), ops_hours: int = Form(None),
+                     ops_room: str = Form(None), acc: dict = Depends(require_account)):
         conn = open_db()
         try:
             store.update_tile(conn, acc["user_id"], tile_id, title.strip(),
                               max(0, int(position)), _norm_panel_width(width),
                               _norm_panel_color(color))
+            # Kachel-spezifische Laufzeit-Option (Intervall/Zeitraum) direkt am Tile
+            # mitspeichern -- steht im selben Bearbeiten-Formular je Kachelart.
+            row = conn.execute("SELECT kind FROM dashboard_tiles WHERE id = ? AND user_id = ?",
+                               (tile_id, acc["user_id"])).fetchone()
+            kind = row["kind"] if row else None
+            now = time.time()
+            if kind == "briefing" and briefing_hour is not None:
+                store.set_setting(conn, "briefing.hour", max(0, min(int(briefing_hour), 23)), now)
+            elif kind == "review":
+                if review_days is not None:
+                    store.set_setting(conn, "review.days", max(1, min(int(review_days), 90)), now)
+                if review_exclude is not None:
+                    store.set_setting(conn, "review.exclude", review_exclude.strip(), now)
+                store.set_tile_content(conn, "review", "", now)  # naechster Lauf mit neuem Zeitraum
+            elif kind == "ops":
+                if ops_hours is not None:
+                    store.set_setting(conn, "ops.hours", max(1, min(int(ops_hours), 168)), now)
+                if ops_room is not None and ops_room.strip():
+                    store.set_setting(conn, "ops.room", ops_room.strip(), now)
+                app.state.ops_cache.clear()
         finally:
             conn.close()
         return RedirectResponse("/settings?msg=Kachel+aktualisiert", status_code=303)
