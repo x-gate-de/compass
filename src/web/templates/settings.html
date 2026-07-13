@@ -579,6 +579,12 @@
               <option value="{{ v }}" {{ 'selected' if kiosk.scale == v else '' }}>{{ lbl }}</option>{% endfor %}
             </select>
           </label>
+          <label>Rand (TV-Overscan)
+            <select name="safe">
+              {% for v, lbl in [('0','Aus'),('1','1 %'),('2','2 %'),('3','3 % (Standard)'),('4','4 %'),('5','5 %')] %}
+              <option value="{{ v }}" {{ 'selected' if kiosk.safe == v else '' }}>{{ lbl }}</option>{% endfor %}
+            </select>
+          </label>
           <label>Vorschau-Zeilen
             <select name="lines">
               {% for v in ['0','1','2','3','5'] %}<option value="{{ v }}" {{ 'selected' if kiosk.lines == v else '' }}>{{ 'Aus' if v == '0' else v }}</option>{% endfor %}

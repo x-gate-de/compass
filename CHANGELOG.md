@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.5
+
+- **Kiosk**: new "border (TV overscan)" setting (0-5 % per side, default 3 %). Many
+  TVs crop the edges of the picture, which cut off e.g. the top ticker; the safe-area
+  border keeps the display inside the visible region.
+
 ## 1.1.4
 
 - **Kiosk readability**: a new "font size (distance)" setting (100-250 %) for the

@@ -854,6 +854,16 @@ body.kiosk main.kiosk-main { max-width: none; margin: 0; padding: .5rem 1rem 1.2
 body.kiosk .ticker { margin: 0 0 .6rem; border-radius: 0; border-left: 0; border-right: 0; }
 body.kiosk .ticker:first-child { border-top: 0; }
 
+/* TV-Overscan-Rand: Fernseher beschneiden die Bildraender, sonst faellt das obere
+   Laufband weg. Rand je Seite in vh/vw (skaliert mit der Aufloesung); box-sizing
+   ist border-box, daher kein Scrollbalken. Am TV zusaetzlich moeglichst
+   "Overscan/Just Scan" abschalten. */
+:root[data-kiosk="1"][data-safe="1"] body.kiosk { padding: 1vh 1vw; }
+:root[data-kiosk="1"][data-safe="2"] body.kiosk { padding: 2vh 2vw; }
+:root[data-kiosk="1"][data-safe="3"] body.kiosk { padding: 3vh 3vw; }
+:root[data-kiosk="1"][data-safe="4"] body.kiosk { padding: 4vh 4vw; }
+:root[data-kiosk="1"][data-safe="5"] body.kiosk { padding: 5vh 5vw; }
+
 /* UI-Skalierung fuers Wand-Display: alle Groessen sind rem-basiert, daher genuegt
    die Wurzel-Schriftgroesse, um Ticker, Karten, Gauges und Panels gemeinsam zu
    vergroessern. Aus Distanz gelesene Displays brauchen deutlich mehr als 16px. */
