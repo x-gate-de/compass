@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/web/app.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.2.0
+# Version: 1.3.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Vereinte compass-Web-UI (FastAPI): EIN Login (XMPP-Bind) und eine Navigations-Shell
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.5"
+APP_VERSION = "1.4.6"
 
 
 class NotAuthenticated(Exception):
@@ -992,6 +992,24 @@ def _register_routes(app):
                       wt_segments=(dd["wt_segments"] if show_tk else None),
                       wt=dd["wt_opts"], ticker_speed=dd["ticker_speed"])
 
+    # Panel-Bild fuers Kiosk-Display: dieselbe serverseitige Renderung wie im
+    # Dashboard, aber token-authentifiziert. Das Display hat weder eine Session
+    # noch eigenen Grafana-Zugang -> compass rendert, cached und liefert das Bild.
+    # Cache-Dauer = Reload-Intervall des Displays (schont die Grafana-Instanz).
+    @app.get("/kiosk/{token}/panel/{panel_id}/img")
+    async def kiosk_panel_img(token: str, panel_id: int, w: int = 1400, h: int = 300):
+        conn = open_db()
+        try:
+            k = _kiosk_cfg(conn)
+            if not k["token"] or not secrets.compare_digest(token, k["token"]):
+                raise HTTPException(status_code=404)
+            uid = store.get_setting_int(conn, "kiosk.user_id", 0)
+        finally:
+            conn.close()
+        if not uid:
+            raise HTTPException(status_code=404)
+        return await _render_panel_response(uid, panel_id, w, h, ttl=max(30, k["refresh"]))
+
     # Anzeige-/Schwellwert-Optionen des Arbeitszeit-Laufbands (app_settings).
     def _worktime_opts(conn):
         return {
@@ -1156,17 +1174,21 @@ def _register_routes(app):
 
     # Serverseitig gerendertes Panel-Bild (same-origin -> keine CSP-/iframe-/Cookie-Probleme).
     # Nutzt die hinterlegten Grafana-Zugangsdaten (Basic-Auth bzw. Bearer-Token).
-    @app.get("/grafana/panels/{panel_id}/img")
-    async def grafana_panel_img(panel_id: int, w: int = 1000, h: int = 300,
-                                acc: dict = Depends(require_account)):
-        key = (acc["user_id"], panel_id, w, h)
+    # Rendert ein Grafana-Panel serverseitig (image-renderer), cached das Bild kurz
+    # und liefert es aus. Auf Fehler wird das letzte gute Bild weitergereicht (das
+    # Display bleibt bei kurzem Grafana-Ausfall ruhig), sonst ein Platzhalter-SVG.
+    # w/h werden geklemmt, damit ein Aufrufer keine riesigen Renderauftraege stellt.
+    async def _render_panel_response(user_id, panel_id, w, h, ttl=60):
+        w = max(100, min(int(w), 3000))
+        h = max(50, min(int(h), 2000))
+        key = (user_id, panel_id, w, h)
         now = time.time()
         ent = app.state.panel_cache.get(key)
-        if ent and now - ent[0] < 60:
+        if ent and now - ent[0] < ttl:
             return Response(ent[1], media_type=ent[2], headers={"Cache-Control": "private, max-age=60"})
         conn = open_db()
         try:
-            p = store.get_grafana_panel(conn, acc["user_id"], panel_id)
+            p = store.get_grafana_panel(conn, user_id, panel_id)
         finally:
             conn.close()
         if not p:
@@ -1190,7 +1212,16 @@ def _register_routes(app):
             detail = "HTTP %d (image-renderer/Login pruefen)" % r.status_code
         except Exception as exc:
             detail = type(exc).__name__
+        # Fallback: letztes gutes (ggf. abgelaufenes) Bild statt Fehler-Platzhalter,
+        # damit ein Buero-Display bei kurzer Grafana-Stoerung nicht "kaputt" wirkt.
+        if ent:
+            return Response(ent[1], media_type=ent[2], headers={"Cache-Control": "private, max-age=30"})
         return _panel_error_svg(detail)
+
+    @app.get("/grafana/panels/{panel_id}/img")
+    async def grafana_panel_img(panel_id: int, w: int = 1000, h: int = 300,
+                                acc: dict = Depends(require_account)):
+        return await _render_panel_response(acc["user_id"], panel_id, w, h)
 
     # --- Feed-Verwaltung ------------------------------------------------------
 

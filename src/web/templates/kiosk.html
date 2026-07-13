@@ -53,11 +53,9 @@
           style="grid-column: {{ '1 / -1' if gspan >= 12 else 'span ' ~ gspan }};{% if b.color %} --pcol: {{ b.color }};{% endif %}">
         {% if b.btype == 'grafana' %}
           {% if b.title %}<div class="gpanel-head">{{ b.title }}</div>{% endif %}
-          {% if b.mode == 'iframe' %}
-          <iframe class="gpanel-frame" src="{{ b.embed_url }}" style="height: {{ b.height }}px" loading="lazy" title="{{ b.title }}"></iframe>
-          {% else %}
-          <img class="gpanel-img" src="/grafana/panels/{{ b.id }}/img?w=1400&h={{ b.height }}" alt="{{ b.title }}" loading="lazy">
-          {% endif %}
+          {# Das Display hat keinen eigenen Grafana-Zugang -> immer das serverseitig
+             gerenderte, token-authentifizierte Bild, nie ein iframe. #}
+          <img class="gpanel-img" src="/kiosk/{{ k.token }}/panel/{{ b.id }}/img?w=1400&h={{ b.height }}" alt="{{ b.title }}" loading="lazy">
         {% elif b.btype == 'briefing' %}
           <div class="meta"><span class="src">{{ ico.source_icon('briefing') }} {{ b.title or 'Morgen-Briefing' }}</span>
             {% if b.data %}<span class="when">{{ b.data.updated_ts|dt }}</span>{% endif %}</div>

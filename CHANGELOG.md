@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.3
+
+- **Kiosk/Grafana**: office displays without their own Grafana access now get the
+  panels as server-rendered images. compass fetches each panel via the Grafana
+  image-renderer, caches it (for the display's reload interval) and serves it over
+  a token-authenticated route /kiosk/<token>/panel/<id>/img. The display needs
+  neither a Grafana connection nor a session; the iframe mode is dropped in kiosk.
+  During a brief Grafana outage the last good image is served instead of an error
+  placeholder. Requires the grafana-image-renderer plugin and a panel access token.
+
 ## 1.1.2
 
 - **Worktime "away" band**: an employee's initials are no longer shown twice
