@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.6
+
+- **Odoo feeds**: the source configuration of existing Odoo feeds (URL, database,
+  login, API key, TLS/open-only) is now editable in the edit form. Previously the
+  source section was missing for Odoo, so e.g. a changed database name could only be
+  fixed by recreating the feed. Leave the API key empty to keep it unchanged.
+
 ## 1.1.5
 
 - **Kiosk**: new "border (TV overscan)" setting (0-5 % per side, default 3 %). Many

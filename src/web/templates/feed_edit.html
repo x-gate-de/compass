@@ -40,6 +40,19 @@
     <label>Max. Alter (h) <input type="number" name="max_age_hours" value="{{ cfg.get('max_age_hours', 24) }}"></label>
     <button class="btn-small" type="submit">Speichern</button>
   </form>
+  {% elif feed['connector_type'] in ('odoo_helpdesk','odoo_project') %}
+  <h2>Quelle</h2>
+  {# Alle Felder sind vorbelegt: das Speichern uebernimmt url/database/username 1:1
+     aus dem Formular. Werden sie geleert, wuerde die Konfiguration ueberschrieben. #}
+  <form method="post" action="/feeds/{{ feed['id'] }}/config" class="grid">
+    <label>URL <input name="url" value="{{ cfg.get('url','') }}" required></label>
+    <label>Datenbank <input name="database" value="{{ cfg.get('database','') }}" required></label>
+    <label>Login <input name="username" value="{{ cfg.get('username','') }}" required></label>
+    <label>API-Key (neu, leer = unveraendert) <input type="password" name="access_token"></label>
+    <label class="chk"><input type="checkbox" name="tls_verify" {{ 'checked' if cfg.get('tls_verify', True) else '' }}> TLS pruefen</label>
+    <label class="chk"><input type="checkbox" name="open_only" {{ 'checked' if cfg.get('open_only', True) else '' }}> nur offene Vorgaenge</label>
+    <button class="btn-small" type="submit">Konfiguration speichern</button>
+  </form>
   {% endif %}
 </section>
 {% endblock %}
