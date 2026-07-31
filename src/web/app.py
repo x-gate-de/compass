@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/web/app.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.6.0
+# Version: 1.7.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Vereinte compass-Web-UI (FastAPI): EIN Login (XMPP-Bind) und eine Navigations-Shell
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.10"
+APP_VERSION = "1.4.11"
 
 
 class NotAuthenticated(Exception):
@@ -77,6 +77,9 @@ def create_app(cfg):
     app.state.worktime_enabled = bool(cfg_get(cfg, "worktime.base_url", "")
                                       and cfg_get(cfg, "worktime.api_key", ""))
     app.state.grafana_tls_verify = bool(cfg_get(cfg, "grafana.tls_verify", True))
+    # Funktion "Mein Tag" (Anthropic-API): nur zeigen, wenn aktiv UND Key gesetzt.
+    app.state.myday_enabled = bool(cfg_get(cfg, "myday.enabled", False)
+                                   and cfg_get(cfg, "myday.api_key", ""))
     # Kurzlebiger Cache gerenderter Grafana-Panel-Bilder (panel_id -> (ts, bytes, ctype)).
     app.state.panel_cache = {}
     # Cache der Betriebs-Kachel (noc-Auswertung, 5 Minuten).
@@ -96,6 +99,7 @@ def create_app(cfg):
     )
     env.globals["app_version"] = APP_VERSION
     env.globals["grafana_configured"] = bool(app.state.grafana_url)
+    env.globals["myday_enabled"] = app.state.myday_enabled
     env.filters["dt"] = lambda t: time.strftime("%d.%m.%Y %H:%M", time.localtime(t)) if t else "-"
     env.filters["ago"] = _ago
     app.state.env = env
@@ -505,6 +509,50 @@ def _register_routes(app):
                           grafana_configured=bool(app.state.grafana_url))
         finally:
             conn.close()
+
+    # --- Funktion "Mein Tag" (Anthropic-API) -----------------------------------
+
+    # Priorisierte Tages-Aufgabenliste. Die eigentliche Berechnung macht der Daemon
+    # (Anthropic-Call); die Seite zeigt nur das gespeicherte Ergebnis. Beim Oeffnen
+    # wird myday.user_id gesetzt, damit der Daemon weiss, fuer wen er rechnen soll.
+    @app.get("/myday", response_class=HTMLResponse)
+    def myday_page(request: Request, acc: dict = Depends(require_account)):
+        conn = open_db()
+        try:
+            store.set_setting(conn, "myday.user_id", acc["user_id"], time.time())
+            row = store.get_tile_content(conn, "myday")
+            requested = store.get_setting_int(conn, "myday.refresh_requested", 0)
+        finally:
+            conn.close()
+        tasks, generated_ts = [], None
+        if row and row["payload"]:
+            try:
+                data = json.loads(row["payload"])
+                tasks = data.get("tasks") or []
+                generated_ts = data.get("generated_ts") or row["updated_ts"]
+            except ValueError:
+                pass
+        # "Berechnung laeuft": manueller Anstoss neuer als das letzte Ergebnis.
+        pending = requested > (row["updated_ts"] if (row and row["updated_ts"]) else 0)
+        return render("myday.html", nav_active="myday", account_jid=acc["jid"],
+                      account_state=account_state(acc["jid"]),
+                      enabled=app.state.myday_enabled, tasks=tasks,
+                      generated_ts=generated_ts, pending=pending)
+
+    # Manueller "Neu berechnen"-Anstoss: setzt nur ein Flag; der Daemon holt es im
+    # naechsten Zyklus ab (bis ~5 min). Kein Anthropic-Call aus dem Web-Prozess.
+    @app.post("/myday/refresh")
+    def myday_refresh(request: Request, acc: dict = Depends(require_account)):
+        if not app.state.myday_enabled:
+            return RedirectResponse("/myday", status_code=303)
+        conn = open_db()
+        try:
+            now = time.time()
+            store.set_setting(conn, "myday.user_id", acc["user_id"], now)
+            store.set_setting(conn, "myday.refresh_requested", int(now), now)
+        finally:
+            conn.close()
+        return RedirectResponse("/myday", status_code=303)
 
     @app.post("/items/{item_id}/action")
     def item_action(request: Request, item_id: int, action: str = Form(...),

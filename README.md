@@ -50,6 +50,16 @@ compass is the successor and merger of two earlier projects:
 - Items disappear automatically when handled at the source; a manual *confirm*
   button hides and un-scores an item without touching the source.
 
+### "My Day" (Mein Tag)
+- A prioritised task list for today, synthesised from all already-aggregated sources
+  (top-ranked items, appointments, on-call). Its own page in the navigation, a daily
+  automatic run plus a manual *recompute* button.
+- Unlike the internal Ollama scoring, this feature uses the **Anthropic API**
+  (`claude-sonnet-5`). Only condensed metadata is sent (source, urgency, due date,
+  sender, shortened title) — no raw content. The web process never calls out; the
+  daemon computes, the page only displays. **Disabled by default** (`myday:` block,
+  needs `enabled` + `api_key`).
+
 ### Tickers & function tiles
 - **News ticker**: pick up to three Odoo helpdesk teams; the LLM condenses each
   team's open tickets into a single running headline (interval configurable up to 12 h).

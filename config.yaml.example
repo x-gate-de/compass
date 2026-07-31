@@ -70,6 +70,23 @@ llm:
   tls_verify: true
   request_timeout: 60
 
+# Funktion "Mein Tag": priorisierte Tages-Aufgabenliste. ABWEICHEND vom internen
+# Ollama-Scoring nutzt diese Funktion die Anthropic-API (externer Anbieter). Es
+# werden nur verdichtete Item-Metadaten uebertragen (keine vollstaendigen
+# Roh-Inhalte). Per Default DEAKTIVIERT; ohne api_key passiert nichts.
+myday:
+  enabled: false
+  provider: "anthropic"
+  base_url: "https://api.anthropic.com"
+  model: "claude-sonnet-5"       # Planungsaufgabe; alternativ claude-opus-4-8
+  api_key: ""                    # Anthropic-API-Key (Datei 0600, NIE ins Repo)
+  anthropic_version: "2023-06-01"
+  max_tasks: 12                  # Laenge der Tagesliste
+  refresh_hour: 7                # taeglicher Automatiklauf ab dieser Stunde
+  auto_refresh: true             # false = nur manueller "Neu berechnen"-Knopf
+  request_timeout: 60
+  tls_verify: true
+
 scoring:
   rescore_interval: 0      # 0 = nur bei Inhalts-/Prioritaetsaenderung neu bewerten
   override_threshold: 90   # ab diesem urgency-Wert darf das Override hochstufen

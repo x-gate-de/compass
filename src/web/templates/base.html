@@ -32,6 +32,7 @@
     {# Hauptziele direkt neben dem Logo: Dashboard (= Logo-Ziel) und Chat. #}
     <nav class="mainnav">
       <a href="/" class="{{ 'active' if nav_active == 'nextup' else '' }}">Dashboard</a>
+      {% if myday_enabled %}<a href="/myday" class="{{ 'active' if nav_active == 'myday' else '' }}">Mein Tag</a>{% endif %}
       <a href="/chat" class="{{ 'active' if nav_active == 'chat' else '' }}">Chat</a>
     </nav>
     </div>

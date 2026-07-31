@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/aggregator.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.2.0
+# Version: 1.3.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Aggregator-Hintergrunddienst (aus x-gate_nextup): pollt Feeds, normalisiert/
@@ -34,6 +34,7 @@ from .db import decrypt_config
 from .calendar_feed import (active_now, classify, covering_today,
                             fetch_collection_events, fetch_events)
 from .connectors.odoo import fetch_closed_tickets
+from .myday import MyDayPlanner
 from .scoring import ScoringParams, compute_scores, decay_factor
 from .worktime import WorktimeClient
 
@@ -105,6 +106,24 @@ class AggregatorDaemon:
         # Rueckblick (geloeste Tickets, alle 6h). Nur aktiv, wenn Kacheln existieren.
         self.briefing_check = 300
         self.review_interval = int(cfg_get(cfg, "review.interval", 6 * 3600))
+
+        # Funktion "Mein Tag": priorisierte Tagesliste per Anthropic-API (externer
+        # Anbieter, dokumentierte Ausnahme). Nur aktiv, wenn enabled UND api_key
+        # gesetzt sind -> ohne Freigabe/Key passiert nichts (kein Datenabfluss).
+        self.myday = None
+        if bool(cfg_get(cfg, "myday.enabled", False)) and cfg_get(cfg, "myday.api_key", ""):
+            self.myday = MyDayPlanner(
+                base_url=cfg_get(cfg, "myday.base_url", "https://api.anthropic.com"),
+                model=cfg_get(cfg, "myday.model", "claude-sonnet-5"),
+                api_key=cfg_get(cfg, "myday.api_key", ""),
+                anthropic_version=cfg_get(cfg, "myday.anthropic_version", "2023-06-01"),
+                max_tasks=int(cfg_get(cfg, "myday.max_tasks", 12)),
+                timeout=int(cfg_get(cfg, "myday.request_timeout", 60)),
+                tls_verify=bool(cfg_get(cfg, "myday.tls_verify", True)),
+            )
+        self.myday_refresh_hour = int(cfg_get(cfg, "myday.refresh_hour", 7))
+        self.myday_auto = bool(cfg_get(cfg, "myday.auto_refresh", True))
+        self.myday_check = 300
 
     # --- Poll -----------------------------------------------------------------
 
@@ -525,6 +544,70 @@ class AggregatorDaemon:
                                    json.dumps({"text": text[:1200]}), now)
         logger.info("Morgen-Briefing erzeugt (%d Zeichen)", len(text))
 
+    # --- Funktion "Mein Tag" (Anthropic-API) ------------------------------------
+
+    # Erzeugt eine priorisierte Tages-Aufgabenliste. Laeuft nur, wenn myday aktiv
+    # ist (enabled + api_key) und die Seite mindestens einmal geoeffnet wurde
+    # (myday.user_id gesetzt). Ausloeser: taeglicher Automatiklauf ab refresh_hour
+    # ODER manueller "Neu berechnen"-Knopf (Flag myday.refresh_requested).
+    async def myday_once(self):
+        if not self.myday:
+            return
+        now = time.time()
+        lt = time.localtime(now)
+        async with self.db_lock:
+            uid = store.get_setting_int(self.conn, "myday.user_id", 0)
+            if not uid:
+                return
+            row = store.get_tile_content(self.conn, "myday")
+            requested = store.get_setting_int(self.conn, "myday.refresh_requested", 0)
+        last_ts = row["updated_ts"] if (row and row["updated_ts"]) else 0
+        manual = requested > last_ts
+        # Automatiklauf: einmal taeglich ab der konfigurierten Stunde.
+        auto_due = (self.myday_auto and lt.tm_hour >= self.myday_refresh_hour
+                    and (not last_ts or time.localtime(last_ts).tm_yday != lt.tm_yday))
+        if not (manual or auto_due):
+            return
+        # Kontext einsammeln: NUR verdichtete Metadaten (Datensparsamkeit) - Titel/
+        # Betreff, Quelle, Absender, Faelligkeit, intern (Ollama) berechnete Dringlichkeit.
+        async with self.db_lock:
+            top = store.get_ranking(self.conn, uid, now)[:15]
+            day_end = now + (24 - lt.tm_hour) * 3600
+            appts = self.conn.execute(
+                "SELECT title, ts_due FROM items WHERE user_id = ? AND source_type = 'calendar' "
+                "AND ts_due BETWEEN ? AND ? ORDER BY ts_due LIMIT 10",
+                (uid, now - 3600, day_end)).fetchall()
+            crow = store.get_calendar_status(self.conn)
+        cal = {}
+        try:
+            cal = json.loads(crow["payload"]) if (crow and crow["payload"]) else {}
+        except ValueError:
+            pass
+        oncall = [e["summary"] for e in active_now(cal.get("events") or [])
+                  if e.get("role") == "oncall"]
+        lines = ["Offene Vorgaenge (Quelle | Dringlichkeit | Faelligkeit | Absender | Betreff):"]
+        for r in top:
+            due = time.strftime("%d.%m %H:%M", time.localtime(r["ts_due"])) if r["ts_due"] else "-"
+            lines.append("- %s | %s | %s | %s | %s" % (
+                r["source_type"], r["urgency"] if r["urgency"] is not None else "-",
+                due, (r["sender"] or "-")[:30], (r["title"] or "-")[:90]))
+        lines.append("Termine heute:")
+        for r in appts:
+            lines.append("- %s %s" % (time.strftime("%H:%M", time.localtime(r["ts_due"])),
+                                      (r["title"] or "-")[:70]))
+        lines.append("Rufbereitschaft jetzt: " + (", ".join(oncall) or "-"))
+        try:
+            tasks = await self.myday.plan("\n".join(lines))
+        except Exception as exc:
+            logger.warning("Mein Tag fehlgeschlagen: %s", type(exc).__name__)
+            return
+        async with self.db_lock:
+            store.set_tile_content(
+                self.conn, "myday",
+                json.dumps({"tasks": tasks, "generated_ts": now}), now)
+        logger.info("Mein Tag erzeugt (%d Aufgaben, %s)", len(tasks),
+                    "manuell" if manual else "automatisch")
+
     # Rueckblick: geloeste HelpDesk-Tickets der letzten 7 Tage (Zugang aus den
     # News-Ticker-Teams; ein Team-Zugang reicht, Abfrage laeuft teamuebergreifend).
     async def review_once(self):
@@ -604,4 +687,7 @@ class AggregatorDaemon:
                                 lambda: self.calendar_interval_current, "calendar"))
         loops.append(self._loop(self.briefing_once, self.briefing_check, "briefing"))
         loops.append(self._loop(self.review_once, 900, "review"))
+        # "Mein Tag" nur einhaengen, wenn die Funktion aktiv ist (externer Anbieter).
+        if self.myday:
+            loops.append(self._loop(self.myday_once, self.myday_check, "myday"))
         await asyncio.gather(*loops)

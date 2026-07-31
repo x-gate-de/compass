@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- **New feature "My Day" (Mein Tag)**: a prioritised task list for today, built from
+  the already-aggregated/scored sources (top items, appointments, on-call). Own page
+  in the navigation, a daily automatic run plus a *recompute* button. The
+  prioritisation uses the Anthropic API (model `claude-sonnet-5`) — unlike the internal
+  Ollama scoring. Data minimisation: only condensed metadata is transmitted (source,
+  internally computed urgency, due date, sender, shortened title), no raw content. The
+  web process never calls out; the daemon computes, the page only displays. Disabled by
+  default (`myday:` block, needs `enabled` + `api_key`).
+
 ## 1.1.8
 
 - **News ticker**: when the access check fails, the error now shows the concrete Odoo

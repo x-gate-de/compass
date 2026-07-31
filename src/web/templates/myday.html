@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+{% import "_icons.html" as ico %}
+{# Quelle des Planers auf die Icon-/Label-Schluessel des Systems abbilden. #}
+{% set srcmap = {'ticket':'helpdesk','project':'project_task','sonst':'other'} %}
+<section class="myday">
+  <div class="myday-head">
+    <h1>Mein Tag</h1>
+    <div class="myday-meta">
+      {% if generated_ts %}<span class="when">Stand: {{ generated_ts|dt }}</span>{% endif %}
+      {% if pending %}<span class="myday-pending">Berechnung laeuft …</span>{% endif %}
+      <form method="post" action="/myday/refresh">
+        <button class="btn-small" type="submit"{{ ' disabled' if not enabled else '' }}>Neu berechnen</button>
+      </form>
+    </div>
+  </div>
+
+  {% if not enabled %}
+  <p class="empty">„Mein Tag" ist nicht aktiviert. In <code>config.yaml</code> unter
+    <code>myday:</code> den Anthropic-API-Key setzen und <code>enabled: true</code>
+    setzen — danach den Daemon neu starten.</p>
+  {% elif not tasks %}
+  <p class="empty">
+    {% if pending %}Die Aufgabenliste wird gerade erstellt. Diese Seite in etwa einer Minute neu laden.
+    {% else %}Noch keine Aufgabenliste. Mit „Neu berechnen" erstellen — oder auf den taeglichen Lauf warten.{% endif %}
+  </p>
+  {% else %}
+  <ol class="myday-list">
+    {% for t in tasks %}
+    {% set sk = srcmap.get(t.source, t.source) %}
+    <li class="myday-item u-{{ 'hot' if t.urgency >= 80 else 'warm' if t.urgency >= 50 else 'low' }}">
+      <div class="myday-rank">{{ t.urgency }}</div>
+      <div class="myday-body">
+        <div class="myday-task">{{ t.task }}</div>
+        {% if t.why %}<div class="myday-why">{{ t.why }}</div>{% endif %}
+      </div>
+      <div class="myday-tags">
+        <span class="src">{{ ico.source_icon(sk) }} {{ ico.source_label(sk) }}</span>
+        {% if t.deadline %}<span class="myday-due">{{ t.deadline }}</span>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  <p class="myday-foot muted">Priorisiert von Claude (Anthropic) aus verdichteten
+    Metadaten deiner Quellen. Keine automatische Ausfuehrung — nur Vorschlag.</p>
+  {% endif %}
+</section>
+{% endblock %}
