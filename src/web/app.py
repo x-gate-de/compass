@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/web/app.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.5.0
+# Version: 1.6.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Vereinte compass-Web-UI (FastAPI): EIN Login (XMPP-Bind) und eine Navigations-Shell
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.8"
+APP_VERSION = "1.4.9"
 
 
 class NotAuthenticated(Exception):
@@ -592,6 +592,13 @@ def _register_routes(app):
             review_days = store.get_setting_int(conn, "review.days", 7)
             review_exclude = store.get_setting(conn, "review.exclude",
                                                "vermutlich SPAM, Systemmeldungen")
+            # Aktueller Odoo-Zugang der Ticker-Teams (fuer das Aktualisieren-Formular
+            # vorbelegen; nie den API-Key). Alle Teams teilen denselben Zugang.
+            ticker_access = {}
+            if ticker_teams:
+                tc = _db.decrypt_config(app.state.fernet_key, ticker_teams[0]["config_enc"])
+                ticker_access = {k: tc.get(k, "") for k in ("url", "database", "username")}
+                ticker_access["tls_verify"] = tc.get("tls_verify", True)
             # Status-Hinweise fuer die Navigationsleiste: Fehler je Modul.
             news_error = any(t["status"] == "error" for t in ticker_teams)
             cal_error = bool(cal_payload and cal_payload.get("feeds")
@@ -604,7 +611,7 @@ def _register_routes(app):
         kiosk_url = ("https://%s/kiosk/%s" % (host, kiosk_cfg["token"])) if kiosk_cfg["token"] else ""
         return render("settings.html", nav_active="settings", account_jid=acc["jid"],
                       account_state=account_state(acc["jid"]),
-                      grafana_panels=panels, ticker_teams=ticker_teams,
+                      grafana_panels=panels, ticker_teams=ticker_teams, ticker_access=ticker_access,
                       profile_text=(prow["profile_text"] if prow else "") or "",
                       feed_counts=feed_counts, ticker_interval=ticker_interval,
                       ticker_speed=ticker_speed,
@@ -1534,6 +1541,38 @@ def _register_routes(app):
         finally:
             conn.close()
         return RedirectResponse(f"/settings?msg={len(chosen)}+Ticker-Team(s)+angelegt", status_code=303)
+
+    # Odoo-Zugang ALLER Ticker-Teams auf einmal aktualisieren (z.B. neuer Datenbank-
+    # name). Alle Teams zeigen auf dieselbe Odoo-Instanz -> ein Formular genuegt. Der
+    # Zugang wird vor dem Speichern gegen Odoo geprueft; API-Key leer = unveraendert.
+    @app.post("/ticker/access")
+    async def ticker_access(request: Request, url: str = Form(...), database: str = Form(...),
+                            username: str = Form(...), access_token: str = Form(""),
+                            tls_verify: str = Form("off"), acc: dict = Depends(require_account)):
+        conn = open_db()
+        try:
+            teams = store.list_ticker_teams(conn, acc["user_id"])
+            if not teams:
+                return RedirectResponse("/settings?error=Keine+Ticker-Teams+vorhanden", status_code=303)
+            # API-Key leer -> bestehenden aus einem Team uebernehmen (unveraendert).
+            token = access_token.strip()
+            if not token:
+                old = _db.decrypt_config(app.state.fernet_key, teams[0]["config_enc"])
+                token = old.get("access_token", "")
+            creds = {"url": url.strip(), "database": database.strip(),
+                     "username": username.strip(), "access_token": token,
+                     "tls_verify": (tls_verify == "on")}
+            try:
+                await asyncio.to_thread(list_helpdesk_teams, creds)
+            except PermissionError:
+                return RedirectResponse("/settings?error=Ticker:+Odoo-Login+abgelehnt", status_code=303)
+            except Exception as exc:
+                return RedirectResponse(f"/settings?error=Ticker:+{type(exc).__name__}", status_code=303)
+            enc = _db.encrypt_config(app.state.fernet_key, creds)
+            n = store.update_ticker_teams_config(conn, acc["user_id"], enc)
+        finally:
+            conn.close()
+        return RedirectResponse(f"/settings?msg=Odoo-Zugang+fuer+{n}+Team(s)+aktualisiert", status_code=303)
 
     @app.post("/ticker/{ticker_id}/delete")
     def ticker_delete(request: Request, ticker_id: int, acc: dict = Depends(require_account)):

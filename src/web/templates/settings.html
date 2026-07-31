@@ -375,6 +375,19 @@
           {% endfor %}
         </ul>
         {% endif %}
+        {% if ticker_teams %}
+        {# Odoo-Zugang aller Teams gemeinsam aendern (z.B. neuer Datenbankname).
+           Vorbelegt aus dem aktuellen Zugang; API-Key leer lassen = unveraendert. #}
+        <div class="design-title" style="margin-top:.6rem">Odoo-Zugang aktualisieren (alle Teams)</div>
+        <form method="post" action="/ticker/access" class="grid">
+          <label>Odoo-URL <input name="url" value="{{ ticker_access.url }}" required></label>
+          <label>Datenbank <input name="database" value="{{ ticker_access.database }}" required></label>
+          <label>Login <input name="username" value="{{ ticker_access.username }}" required></label>
+          <label>API-Key (neu, leer = unveraendert) <input type="password" name="access_token"></label>
+          <label class="chk"><input type="checkbox" name="tls_verify" {{ 'checked' if ticker_access.tls_verify else '' }}> TLS pruefen</label>
+          <button class="btn-small" type="submit">Zugang speichern</button>
+        </form>
+        {% endif %}
         {% if ticker_teams|length < 3 %}
         <div class="design-title" style="margin-top:.6rem">Team hinzufuegen (Odoo-Zugang)</div>
         <form method="post" action="/ticker/discover" class="grid">

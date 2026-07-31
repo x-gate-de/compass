@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/store.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.2.0
+# Version: 1.3.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Datenzugriffsschicht ueber dem Aggregator-Schema (compass.db): Gruppen, Feeds, Items,
@@ -521,6 +521,19 @@ def list_enabled_ticker_teams(conn):
 def delete_ticker_team(conn, user_id, ticker_id):
     conn.execute("DELETE FROM ticker_teams WHERE id = ? AND user_id = ?", (ticker_id, user_id))
     conn.commit()
+
+
+# Setzt den Odoo-Zugang (config_enc) fuer ALLE Ticker-Teams eines Nutzers zugleich;
+# alle Teams zeigen auf dieselbe Odoo-Instanz. Status wird zurueckgesetzt, damit der
+# naechste Daemon-Zyklus neu bewertet. Rueckgabe: Anzahl aktualisierter Teams.
+def update_ticker_teams_config(conn, user_id, config_enc):
+    cur = conn.execute(
+        "UPDATE ticker_teams SET config_enc = ?, status = 'ok', status_detail = NULL "
+        "WHERE user_id = ?",
+        (config_enc, user_id),
+    )
+    conn.commit()
+    return cur.rowcount
 
 
 def set_ticker_headline(conn, ticker_id, headline, ticket_count, now):

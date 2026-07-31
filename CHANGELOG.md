@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.7
+
+- **News ticker**: the Odoo access of the ticker teams (URL, database, login, API key)
+  can now be updated in settings — for all teams at once, since they point at the same
+  Odoo instance. Previously the access could only be set when adding a team, so a
+  changed database name made the teams (and thus the HelpDesk ticker and the review
+  tile) fail with "Fault". Leave the API key empty to keep it unchanged.
+
 ## 1.1.6
 
 - **Odoo feeds**: the source configuration of existing Odoo feeds (URL, database,
