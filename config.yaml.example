@@ -84,7 +84,7 @@ myday:
   max_tasks: 12                  # Laenge der Tagesliste
   refresh_hour: 7                # taeglicher Automatiklauf ab dieser Stunde
   auto_refresh: true             # false = nur manueller "Neu berechnen"-Knopf
-  request_timeout: 60
+  request_timeout: 90
   tls_verify: true
 
 scoring:

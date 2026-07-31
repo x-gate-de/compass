@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/aggregator.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.4.0
+# Version: 1.5.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Aggregator-Hintergrunddienst (aus x-gate_nextup): pollt Feeds, normalisiert/
@@ -586,25 +586,39 @@ class AggregatorDaemon:
         oncall = [e["summary"] for e in active_now(cal.get("events") or [])
                   if e.get("role") == "oncall"]
 
-        def _fmt(r):
-            due = time.strftime("%d.%m %H:%M", time.localtime(r["ts_due"])) if r["ts_due"] else "-"
-            return "- %s | %s | %s | %s" % (
-                r["urgency"] if r["urgency"] is not None else "-",
-                due, (r["sender"] or "-")[:30], (r["title"] or "-")[:90])
-
         # Getrennte Bloecke, damit die zugewiesenen Odoo-Tickets/-Aufgaben (die
         # eigentlichen To-Dos) nicht von vielen aehnlichen Mail-Meldungen aus der
         # gemischten Rangliste verdraengt werden. Je Block nach Dringlichkeit gedeckelt.
+        # Jede Zeile bekommt eine Nummer (#N); refmap N -> Deep-Link. Das LLM gibt je
+        # Aufgabe die ref-Nummer zurueck, wir loesen sie danach zur URL auf (URLs gehen
+        # NICHT an das LLM).
         news = [r for r in rank if r["source_type"] in ("mail", "chat", "groupchat")][:12]
         tickets = [r for r in rank if r["source_type"] == "helpdesk"][:12]
         proj = [r for r in rank if r["source_type"] == "project_task"][:12]
-        lines = ["Format je Zeile: Dringlichkeit | Faelligkeit | Absender/Quelle | Betreff.",
-                 "", "Meldungen (Mail/Chat):"]
-        lines += [_fmt(r) for r in news] or ["- keine"]
-        lines += ["", "HelpDesk-Tickets (mir zugewiesen, offen):"]
-        lines += [_fmt(r) for r in tickets] or ["- keine"]
-        lines += ["", "Projekt-Aufgaben (mir zugewiesen, offen):"]
-        lines += [_fmt(r) for r in proj] or ["- keine"]
+        refmap = {}
+        counter = [0]
+
+        def _emit(lines, header, rows):
+            lines.append(header)
+            if not rows:
+                lines.append("- keine")
+                return
+            for r in rows:
+                counter[0] += 1
+                n = counter[0]
+                if r["url"]:
+                    refmap[n] = r["url"]
+                due = time.strftime("%d.%m %H:%M", time.localtime(r["ts_due"])) if r["ts_due"] else "-"
+                lines.append("#%d | %s | %s | %s | %s" % (
+                    n, r["urgency"] if r["urgency"] is not None else "-",
+                    due, (r["sender"] or "-")[:30], (r["title"] or "-")[:90]))
+
+        lines = ["Format je Zeile: #Nr | Dringlichkeit | Faelligkeit | Absender/Quelle | Betreff.", ""]
+        _emit(lines, "Meldungen (Mail/Chat):", news)
+        lines.append("")
+        _emit(lines, "HelpDesk-Tickets (mir zugewiesen, offen):", tickets)
+        lines.append("")
+        _emit(lines, "Projekt-Aufgaben (mir zugewiesen, offen):", proj)
         lines.append("")
         lines.append("Termine heute:")
         for r in appts:
@@ -616,6 +630,9 @@ class AggregatorDaemon:
         except Exception as exc:
             logger.warning("Mein Tag fehlgeschlagen: %s", type(exc).__name__)
             return
+        # ref-Nummer je Aufgabe zum Deep-Link aufloesen; ref selbst nicht speichern.
+        for t in tasks:
+            t["url"] = refmap.get(t.pop("ref", None))
         async with self.db_lock:
             store.set_tile_content(
                 self.conn, "myday",

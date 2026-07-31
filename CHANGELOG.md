@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2
+
+- **My Day**: each task now links directly to its source record (Odoo ticket or project
+  task) when a deep-link exists. Implemented without leaking URLs to the external
+  provider: each context line is numbered (#N), the LLM returns the reference per task,
+  and compass resolves it to the URL server-side. Mail/appointments have no deep-links
+  and stay unlinked. Anthropic timeout raised to 90s.
+
 ## 1.2.1
 
 - **My Day**: the assigned Odoo helpdesk tickets and project tasks are now passed to

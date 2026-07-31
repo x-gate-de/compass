@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/myday.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.1.0
+# Version: 1.2.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Funktion "Mein Tag": erzeugt aus verdichteten Item-Metadaten (Top-Eintraege,
@@ -55,10 +55,14 @@ class MyDayPlanner:
             "angemessen vertreten sein - sie duerfen nicht von vielen aehnlichen "
             "Mail-Benachrichtigungen verdraengt werden. Buendle Wiederholungen (z.B. "
             "viele gleichartige Zertifikats-/Login-Mails) zu EINER Aufgabe. "
+            "Jede Eingabezeile beginnt mit einer Nummer (#N). PFLICHT: gib bei JEDER "
+            "Aufgabe im Feld ref die Nummer des wichtigsten Quell-Eintrags an, aus dem "
+            "sie stammt (bei Buendelung die wichtigste Nummer). Nur wenn wirklich kein "
+            "Eintrag passt, ref = null. "
             "Antworte AUSSCHLIESSLICH mit JSON in genau dieser Form: "
-            '{"tasks":[{"task":"kurze Handlungsanweisung","source":"mail|chat|ticket|'
-            'project|calendar|sonst","why":"knappe Begruendung","urgency":1-100,'
-            '"deadline":"HH:MM oder Datum oder null"}]}. '
+            '{"tasks":[{"ref":Nummer oder null,"task":"kurze Handlungsanweisung",'
+            '"source":"mail|chat|ticket|project|calendar|sonst","why":"knappe '
+            'Begruendung","urgency":1-100,"deadline":"HH:MM oder Datum oder null"}]}. '
             "Maximal %d Aufgaben. Kein Markdown, kein Text ausserhalb des JSON."
             % self.max_tasks
         )
@@ -119,12 +123,18 @@ class MyDayPlanner:
             urgency = max(1, min(100, urgency))
             deadline = t.get("deadline")
             deadline = str(deadline).strip()[:40] if deadline not in (None, "", "null") else None
+            # ref = Nummer des Quell-Eintrags (#N); der Aufrufer mappt sie auf die URL.
+            try:
+                ref = int(t.get("ref")) if t.get("ref") not in (None, "", "null") else None
+            except (TypeError, ValueError):
+                ref = None
             tasks.append({
                 "task": task,
                 "source": str(t.get("source", "sonst")).strip().lower()[:20] or "sonst",
                 "why": str(t.get("why", "")).strip()[:200],
                 "urgency": urgency,
                 "deadline": deadline,
+                "ref": ref,
             })
         tasks.sort(key=lambda x: -x["urgency"])
         return tasks

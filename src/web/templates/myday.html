@@ -31,7 +31,10 @@
     <li class="myday-item u-{{ 'hot' if t.urgency >= 80 else 'warm' if t.urgency >= 50 else 'low' }}">
       <div class="myday-rank">{{ t.urgency }}</div>
       <div class="myday-body">
-        <div class="myday-task">{{ t.task }}</div>
+        <div class="myday-task">
+          {% if t.url %}<a href="{{ t.url }}" target="_blank" rel="noopener">{{ t.task }} <span class="myday-ext" aria-hidden="true">↗</span></a>
+          {% else %}{{ t.task }}{% endif %}
+        </div>
         {% if t.why %}<div class="myday-why">{{ t.why }}</div>{% endif %}
       </div>
       <div class="myday-tags">
