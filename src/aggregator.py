@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/aggregator.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.3.0
+# Version: 1.4.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Aggregator-Hintergrunddienst (aus x-gate_nextup): pollt Feeds, normalisiert/
@@ -571,7 +571,7 @@ class AggregatorDaemon:
         # Kontext einsammeln: NUR verdichtete Metadaten (Datensparsamkeit) - Titel/
         # Betreff, Quelle, Absender, Faelligkeit, intern (Ollama) berechnete Dringlichkeit.
         async with self.db_lock:
-            top = store.get_ranking(self.conn, uid, now)[:15]
+            rank = store.get_ranking(self.conn, uid, now)
             day_end = now + (24 - lt.tm_hour) * 3600
             appts = self.conn.execute(
                 "SELECT title, ts_due FROM items WHERE user_id = ? AND source_type = 'calendar' "
@@ -585,12 +585,27 @@ class AggregatorDaemon:
             pass
         oncall = [e["summary"] for e in active_now(cal.get("events") or [])
                   if e.get("role") == "oncall"]
-        lines = ["Offene Vorgaenge (Quelle | Dringlichkeit | Faelligkeit | Absender | Betreff):"]
-        for r in top:
+
+        def _fmt(r):
             due = time.strftime("%d.%m %H:%M", time.localtime(r["ts_due"])) if r["ts_due"] else "-"
-            lines.append("- %s | %s | %s | %s | %s" % (
-                r["source_type"], r["urgency"] if r["urgency"] is not None else "-",
-                due, (r["sender"] or "-")[:30], (r["title"] or "-")[:90]))
+            return "- %s | %s | %s | %s" % (
+                r["urgency"] if r["urgency"] is not None else "-",
+                due, (r["sender"] or "-")[:30], (r["title"] or "-")[:90])
+
+        # Getrennte Bloecke, damit die zugewiesenen Odoo-Tickets/-Aufgaben (die
+        # eigentlichen To-Dos) nicht von vielen aehnlichen Mail-Meldungen aus der
+        # gemischten Rangliste verdraengt werden. Je Block nach Dringlichkeit gedeckelt.
+        news = [r for r in rank if r["source_type"] in ("mail", "chat", "groupchat")][:12]
+        tickets = [r for r in rank if r["source_type"] == "helpdesk"][:12]
+        proj = [r for r in rank if r["source_type"] == "project_task"][:12]
+        lines = ["Format je Zeile: Dringlichkeit | Faelligkeit | Absender/Quelle | Betreff.",
+                 "", "Meldungen (Mail/Chat):"]
+        lines += [_fmt(r) for r in news] or ["- keine"]
+        lines += ["", "HelpDesk-Tickets (mir zugewiesen, offen):"]
+        lines += [_fmt(r) for r in tickets] or ["- keine"]
+        lines += ["", "Projekt-Aufgaben (mir zugewiesen, offen):"]
+        lines += [_fmt(r) for r in proj] or ["- keine"]
+        lines.append("")
         lines.append("Termine heute:")
         for r in appts:
             lines.append("- %s %s" % (time.strftime("%H:%M", time.localtime(r["ts_due"])),

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1
+
+- **My Day**: the assigned Odoo helpdesk tickets and project tasks are now passed to
+  the planner as their own blocks (no longer only the mixed top-15 ranking), where they
+  used to be crowded out by many similar mail notifications. The prompt also asks for a
+  balanced treatment of all blocks and to bundle recurring notifications. Raised
+  max_tokens so a longer list is not truncated.
+
 ## 1.2.0
 
 - **New feature "My Day" (Mein Tag)**: a prioritised task list for today, built from

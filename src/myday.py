@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/myday.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.0.0
+# Version: 1.1.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Funktion "Mein Tag": erzeugt aus verdichteten Item-Metadaten (Top-Eintraege,
@@ -45,11 +45,16 @@ class MyDayPlanner:
     def _system(self):
         return (
             "Du bist der persoenliche Assistent des Leiters eines Hosting-Betriebs. "
-            "Aus den folgenden verdichteten Informationen (offene Vorgaenge, Termine, "
-            "Tickets, Mails, Chats - jeweils nur Kurzangaben) erstellst du eine "
+            "Aus den folgenden verdichteten Informationen (nach Bloecken gegliedert: "
+            "Meldungen, HelpDesk-Tickets, Projekt-Aufgaben, Termine) erstellst du eine "
             "priorisierte Aufgabenliste fuer HEUTE. Regeln: nur real ableitbare "
             "Aufgaben, nichts erfinden; Wichtigstes zuerst (Ausfaelle/Stoerungen > "
             "Fristen > Termine > Routine); fasse zusammengehoerige Punkte zusammen. "
+            "WICHTIG: beruecksichtige ausgewogen ALLE Bloecke. Die mir zugewiesenen "
+            "HelpDesk-Tickets und Projekt-Aufgaben sind meine eigenen To-Dos und muessen "
+            "angemessen vertreten sein - sie duerfen nicht von vielen aehnlichen "
+            "Mail-Benachrichtigungen verdraengt werden. Buendle Wiederholungen (z.B. "
+            "viele gleichartige Zertifikats-/Login-Mails) zu EINER Aufgabe. "
             "Antworte AUSSCHLIESSLICH mit JSON in genau dieser Form: "
             '{"tasks":[{"task":"kurze Handlungsanweisung","source":"mail|chat|ticket|'
             'project|calendar|sonst","why":"knappe Begruendung","urgency":1-100,'
@@ -70,7 +75,7 @@ class MyDayPlanner:
         # Prosa werden in _parse entfernt). max_tokens grosszuegig gegen Abbruch.
         payload = {
             "model": self.model,
-            "max_tokens": 3000,
+            "max_tokens": 8000,
             "system": self._system(),
             "messages": [{"role": "user", "content": context}],
         }
