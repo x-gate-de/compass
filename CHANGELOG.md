@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.8
+
+- **News ticker**: when the access check fails, the error now shows the concrete Odoo
+  reason (last line of the fault, e.g. "database ... does not exist") instead of just
+  "Fault" — making a wrong database name immediately obvious.
+
 ## 1.1.7
 
 - **News ticker**: the Odoo access of the ticker teams (URL, database, login, API key)

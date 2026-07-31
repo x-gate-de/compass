@@ -28,7 +28,7 @@ import sqlite3
 import threading
 import time
 from typing import List
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import httpx
 import jinja2
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.9"
+APP_VERSION = "1.4.10"
 
 
 class NotAuthenticated(Exception):
@@ -203,6 +203,19 @@ def grafana_render_url(embed_url, width, height):
     q["width"] = str(int(width))
     q["height"] = str(int(height))
     return urlunsplit((parts.scheme, parts.netloc, path, urlencode(q), ""))
+
+
+# Macht eine Odoo-/XML-RPC-Ausnahme fuer die Anzeige lesbar. Ein xmlrpc-Fault
+# transportiert den Grund in faultString (oft ein mehrzeiliger Server-Traceback);
+# die letzte nicht-leere Zeile nennt meist die Ursache (z.B. 'database ... does not
+# exist' -> falscher DB-Name). Ergebnis knapp gehalten; enthaelt keine Secrets.
+def _odoo_error_hint(exc):
+    fault = getattr(exc, "faultString", None)
+    if fault:
+        lines = [ln.strip() for ln in str(fault).splitlines() if ln.strip()]
+        if lines:
+            return lines[-1][:160]
+    return "%s: %s" % (type(exc).__name__, str(exc)[:120]) if str(exc) else type(exc).__name__
 
 
 # Platzhalter-Bild (SVG) bei Renderfehler -- ohne Secrets, nur der Fehlergrund.
@@ -1565,9 +1578,12 @@ def _register_routes(app):
             try:
                 await asyncio.to_thread(list_helpdesk_teams, creds)
             except PermissionError:
-                return RedirectResponse("/settings?error=Ticker:+Odoo-Login+abgelehnt", status_code=303)
+                return RedirectResponse("/settings?error=Ticker:+Odoo-Login+abgelehnt+(Login/API-Key+pruefen)", status_code=303)
             except Exception as exc:
-                return RedirectResponse(f"/settings?error=Ticker:+{type(exc).__name__}", status_code=303)
+                # Odoo-Fault verstaendlich machen: die letzte Zeile der faultString nennt
+                # meist den Grund (z.B. 'database ... does not exist' -> falscher DB-Name).
+                reason = _odoo_error_hint(exc)
+                return RedirectResponse(f"/settings?error=Ticker:+{quote(reason)}", status_code=303)
             enc = _db.encrypt_config(app.state.fernet_key, creds)
             n = store.update_ticker_teams_config(conn, acc["user_id"], enc)
         finally:
