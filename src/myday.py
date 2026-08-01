@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/myday.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.3.0
+# Version: 1.4.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Funktion "Mein Tag": erzeugt aus verdichteten Item-Metadaten (Top-Eintraege,
@@ -60,12 +60,14 @@ class MyDayPlanner:
             "sie stammt (bei Buendelung die wichtigste Nummer). Nur wenn wirklich kein "
             "Eintrag passt, ref = null. "
             "Ergaenze je Aufgabe eine konkrete Handlungsempfehlung (recommendation: 1-2 "
-            "Saetze, welcher naechste Schritt konkret sinnvoll ist). Wo eine schriftliche "
-            "Antwort passt (Mail/Ticket/Anfrage), formuliere zusaetzlich einen fertigen, "
-            "hoeflichen Antwort-Entwurf auf Deutsch (reply). Beachte: dir liegen nur die "
-            "Kurzangaben vor (Betreff/Absender), NICHT der volle Inhalt - halte den "
-            "Entwurf daher allgemein und markiere offene Stellen mit [...]. Passt keine "
-            "schriftliche Antwort (z.B. rein interne Pruef-/Wartungsaufgabe), reply = null. "
+            "Saetze, welcher naechste Schritt konkret sinnvoll ist). Formuliere zusaetzlich "
+            "einen fertigen deutschen Text-Entwurf (reply): bei Mail/HelpDesk-Ticket/Anfrage "
+            "eine hoefliche Antwort an den Absender; bei einer PROJEKT-Aufgabe eine kurze "
+            "Status-/Kommentar-Notiz bzw. die naechste Nachricht an das Team oder den "
+            "Zustaendigen. Beachte: dir liegen nur die Kurzangaben vor (Betreff/Absender), "
+            "NICHT der volle Inhalt - halte den Entwurf allgemein und markiere offene "
+            "Stellen mit [...]. Nur wenn wirklich kein sinnvoller Text moeglich ist (reiner "
+            "Termin oder rein technische Selbstpruefung), reply = null. "
             "Antworte AUSSCHLIESSLICH mit JSON in genau dieser Form: "
             '{"tasks":[{"ref":Nummer oder null,"task":"kurze Handlungsanweisung",'
             '"source":"mail|chat|ticket|project|calendar|sonst","why":"knappe '

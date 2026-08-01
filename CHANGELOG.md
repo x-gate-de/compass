@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.4
+
+- **My Day**: a task's displayed source is now derived reliably from its referenced
+  source item (chat was previously mislabelled as "mail" because the messages block did
+  not carry the per-line source); each line now also includes its real source.
+- **My Day**: draft replies are now generated for project tasks too (as a status/comment
+  note or the next message to the team), not just mail/helpdesk tickets.
+
 ## 1.2.3
 
 - **My Day**: each task now comes with a concrete recommended action and — where a

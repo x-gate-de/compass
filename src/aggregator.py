@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/aggregator.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.5.0
+# Version: 1.6.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Aggregator-Hintergrunddienst (aus x-gate_nextup): pollt Feeds, normalisiert/
@@ -606,14 +606,15 @@ class AggregatorDaemon:
             for r in rows:
                 counter[0] += 1
                 n = counter[0]
-                if r["url"]:
-                    refmap[n] = r["url"]
+                # Quelle + URL je Nummer merken -> Anzeige-Quelle und Deep-Link
+                # kommen verlaesslich aus dem Item, nicht aus der LLM-Rateung.
+                refmap[n] = {"url": r["url"], "source": r["source_type"]}
                 due = time.strftime("%d.%m %H:%M", time.localtime(r["ts_due"])) if r["ts_due"] else "-"
-                lines.append("#%d | %s | %s | %s | %s" % (
-                    n, r["urgency"] if r["urgency"] is not None else "-",
+                lines.append("#%d | %s | %s | %s | %s | %s" % (
+                    n, r["source_type"], r["urgency"] if r["urgency"] is not None else "-",
                     due, (r["sender"] or "-")[:30], (r["title"] or "-")[:90]))
 
-        lines = ["Format je Zeile: #Nr | Dringlichkeit | Faelligkeit | Absender/Quelle | Betreff.", ""]
+        lines = ["Format je Zeile: #Nr | Quelle | Dringlichkeit | Faelligkeit | Absender | Betreff.", ""]
         _emit(lines, "Meldungen (Mail/Chat):", news)
         lines.append("")
         _emit(lines, "HelpDesk-Tickets (mir zugewiesen, offen):", tickets)
@@ -630,9 +631,16 @@ class AggregatorDaemon:
         except Exception as exc:
             logger.warning("Mein Tag fehlgeschlagen: %s", type(exc).__name__)
             return
-        # ref-Nummer je Aufgabe zum Deep-Link aufloesen; ref selbst nicht speichern.
+        # ref-Nummer je Aufgabe aufloesen: Deep-Link UND verlaessliche Anzeige-Quelle
+        # aus dem referenzierten Item (korrigiert z.B. Chat, das sonst als "mail"
+        # gelabelt wuerde). ref selbst nicht speichern. Ohne ref: LLM-Quelle bleibt.
         for t in tasks:
-            t["url"] = refmap.get(t.pop("ref", None))
+            info = refmap.get(t.pop("ref", None))
+            if info:
+                t["url"] = info["url"]
+                t["source"] = info["source"]
+            else:
+                t["url"] = None
         async with self.db_lock:
             store.set_tile_content(
                 self.conn, "myday",
