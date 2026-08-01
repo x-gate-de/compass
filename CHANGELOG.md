@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.5
+
+- **My Day**: tasks with an Odoo deep-link now have an "open as note in Odoo" button on
+  the draft: it copies the draft to the clipboard and opens the task in Odoo — paste it
+  there as a log note and save it yourself. compass deliberately does not write to Odoo
+  (source systems are read-only); Odoo offers no URL-based note prefill. For project
+  tasks the section is now labelled "note draft".
+
 ## 1.2.4
 
 - **My Day**: a task's displayed source is now derived reliably from its referenced

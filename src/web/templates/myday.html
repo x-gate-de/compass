@@ -39,9 +39,13 @@
         {% if t.recommendation %}<div class="myday-rec"><span class="myday-lbl">Empfehlung</span> {{ t.recommendation }}</div>{% endif %}
         {% if t.reply %}
         <details class="myday-reply">
-          <summary>Antwort-Entwurf</summary>
+          <summary>{{ 'Notiz-Entwurf' if t.source == 'project_task' else 'Antwort-Entwurf' }}</summary>
           <textarea readonly class="myday-reply-text" rows="6">{{ t.reply }}</textarea>
-          <button type="button" class="btn-small myday-copy" data-copy>Kopieren</button>
+          <div class="myday-reply-actions">
+            <button type="button" class="btn-small myday-copy">Kopieren</button>
+            {% if t.url %}<button type="button" class="btn-small myday-open" data-open-url="{{ t.url }}"
+              title="Kopiert den Entwurf und oeffnet die Aufgabe in Odoo — dort als Log-Notiz einfuegen">Als Notiz in Odoo oeffnen</button>{% endif %}
+          </div>
         </details>
         {% endif %}
       </div>
@@ -54,8 +58,9 @@
   </ol>
   <p class="myday-foot muted">Priorisiert von Claude (Anthropic) aus verdichteten
     Metadaten deiner Quellen. Empfehlungen und Antwort-Entwuerfe basieren nur auf
-    Betreff/Absender (nicht dem vollen Inhalt) — vor dem Senden pruefen. Keine
-    automatische Ausfuehrung.</p>
+    Betreff/Absender (nicht dem vollen Inhalt) — vor dem Senden pruefen. „Als Notiz in
+    Odoo oeffnen" kopiert den Entwurf und oeffnet die Aufgabe; dort als Log-Notiz
+    einfuegen und selbst speichern. compass schreibt NICHT automatisch nach Odoo.</p>
   {% endif %}
 </section>
 <script src="/static/myday.js?v={{ app_version }}" defer></script>
