@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/web/app.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.7.3
+# Version: 1.7.4
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Vereinte compass-Web-UI (FastAPI): EIN Login (XMPP-Bind) und eine Navigations-Shell
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.14"
+APP_VERSION = "1.4.15"
 
 
 class NotAuthenticated(Exception):

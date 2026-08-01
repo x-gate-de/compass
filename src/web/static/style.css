@@ -873,20 +873,6 @@ table.pick th, table.pick td { text-align: left; padding: .3rem .4rem; border-bo
 .myday-task a:hover { color: var(--accent); text-decoration: underline; }
 .myday-ext { color: var(--accent2); font-weight: 700; font-size: .8em; }
 .myday-why { font-size: .8rem; color: var(--muted); margin-top: .15rem; }
-.myday-rec { font-size: .82rem; color: var(--ink-soft); margin-top: .35rem; line-height: 1.4; }
-.myday-lbl { display: inline-block; font-size: .64rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .04em; color: var(--accent); border: 1px solid var(--line);
-  border-radius: 3px; padding: 0 .3rem; margin-right: .3rem; vertical-align: .05em; }
-.myday-reply { margin-top: .5rem; }
-.myday-reply > summary { cursor: pointer; font-size: .78rem; font-weight: 600; color: var(--accent2);
-  list-style: none; display: inline-flex; align-items: center; gap: .3rem; }
-.myday-reply > summary::before { content: "✎"; font-size: .9em; }
-.myday-reply > summary::-webkit-details-marker { display: none; }
-.myday-reply[open] > summary { margin-bottom: .35rem; }
-.myday-reply-text { width: 100%; box-sizing: border-box; resize: vertical;
-  background: var(--bg); color: var(--ink); border: 1px solid var(--line);
-  border-radius: 5px; padding: .5rem .6rem; font: inherit; font-size: .82rem; line-height: 1.45; }
-.myday-reply-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
 .myday-tags { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem;
   white-space: nowrap; }
 .myday-tags .src { display: inline-flex; align-items: center; gap: .3rem;

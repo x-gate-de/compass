@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/myday.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.4.0
+# Version: 1.5.0
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Funktion "Mein Tag": erzeugt aus verdichteten Item-Metadaten (Top-Eintraege,
@@ -59,21 +59,10 @@ class MyDayPlanner:
             "Aufgabe im Feld ref die Nummer des wichtigsten Quell-Eintrags an, aus dem "
             "sie stammt (bei Buendelung die wichtigste Nummer). Nur wenn wirklich kein "
             "Eintrag passt, ref = null. "
-            "Ergaenze je Aufgabe eine konkrete Handlungsempfehlung (recommendation: 1-2 "
-            "Saetze, welcher naechste Schritt konkret sinnvoll ist). Formuliere zusaetzlich "
-            "einen fertigen deutschen Text-Entwurf (reply): bei Mail/HelpDesk-Ticket/Anfrage "
-            "eine hoefliche Antwort an den Absender; bei einer PROJEKT-Aufgabe eine kurze "
-            "Status-/Kommentar-Notiz bzw. die naechste Nachricht an das Team oder den "
-            "Zustaendigen. Beachte: dir liegen nur die Kurzangaben vor (Betreff/Absender), "
-            "NICHT der volle Inhalt - halte den Entwurf allgemein und markiere offene "
-            "Stellen mit [...]. Nur wenn wirklich kein sinnvoller Text moeglich ist (reiner "
-            "Termin oder rein technische Selbstpruefung), reply = null. "
             "Antworte AUSSCHLIESSLICH mit JSON in genau dieser Form: "
             '{"tasks":[{"ref":Nummer oder null,"task":"kurze Handlungsanweisung",'
             '"source":"mail|chat|ticket|project|calendar|sonst","why":"knappe '
-            'Begruendung","urgency":1-100,"deadline":"HH:MM oder Datum oder null",'
-            '"recommendation":"konkrete Handlungsempfehlung","reply":"Antwort-Entwurf '
-            'oder null"}]}. '
+            'Begruendung","urgency":1-100,"deadline":"HH:MM oder Datum oder null"}]}. '
             "Maximal %d Aufgaben. Kein Markdown, kein Text ausserhalb des JSON."
             % self.max_tasks
         )
@@ -90,7 +79,7 @@ class MyDayPlanner:
         # Prosa werden in _parse entfernt). max_tokens grosszuegig gegen Abbruch.
         payload = {
             "model": self.model,
-            "max_tokens": 16000,
+            "max_tokens": 4000,
             "system": self._system(),
             "messages": [{"role": "user", "content": context}],
         }
@@ -139,8 +128,6 @@ class MyDayPlanner:
                 ref = int(t.get("ref")) if t.get("ref") not in (None, "", "null") else None
             except (TypeError, ValueError):
                 ref = None
-            reply = t.get("reply")
-            reply = str(reply).strip()[:2000] if reply not in (None, "", "null") else None
             tasks.append({
                 "task": task,
                 "source": str(t.get("source", "sonst")).strip().lower()[:20] or "sonst",
@@ -148,8 +135,6 @@ class MyDayPlanner:
                 "urgency": urgency,
                 "deadline": deadline,
                 "ref": ref,
-                "recommendation": str(t.get("recommendation", "")).strip()[:400],
-                "reply": reply,
             })
         tasks.sort(key=lambda x: -x["urgency"])
         return tasks

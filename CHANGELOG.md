@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.6
+
+- **My Day**: removed the recommended action and the draft reply/note per task again
+  (the AI reply now lives directly in Odoo, which is a better home for it). Each task
+  keeps its title, reason, urgency, due date and the deep-link to the ticket/task. The
+  related myday.js was removed; max_tokens/timeout lowered again.
+
 ## 1.2.5
 
 - **My Day**: tasks with an Odoo deep-link now have an "open as note in Odoo" button on
