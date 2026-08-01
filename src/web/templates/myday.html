@@ -36,6 +36,14 @@
           {% else %}{{ t.task }}{% endif %}
         </div>
         {% if t.why %}<div class="myday-why">{{ t.why }}</div>{% endif %}
+        {% if t.recommendation %}<div class="myday-rec"><span class="myday-lbl">Empfehlung</span> {{ t.recommendation }}</div>{% endif %}
+        {% if t.reply %}
+        <details class="myday-reply">
+          <summary>Antwort-Entwurf</summary>
+          <textarea readonly class="myday-reply-text" rows="6">{{ t.reply }}</textarea>
+          <button type="button" class="btn-small myday-copy" data-copy>Kopieren</button>
+        </details>
+        {% endif %}
       </div>
       <div class="myday-tags">
         <span class="src">{{ ico.source_icon(sk) }} {{ ico.source_label(sk) }}</span>
@@ -45,7 +53,10 @@
     {% endfor %}
   </ol>
   <p class="myday-foot muted">Priorisiert von Claude (Anthropic) aus verdichteten
-    Metadaten deiner Quellen. Keine automatische Ausfuehrung — nur Vorschlag.</p>
+    Metadaten deiner Quellen. Empfehlungen und Antwort-Entwuerfe basieren nur auf
+    Betreff/Absender (nicht dem vollen Inhalt) — vor dem Senden pruefen. Keine
+    automatische Ausfuehrung.</p>
   {% endif %}
 </section>
+<script src="/static/myday.js?v={{ app_version }}" defer></script>
 {% endblock %}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.3
+
+- **My Day**: each task now comes with a concrete recommended action and — where a
+  written reply fits (mail/ticket) — a ready-to-use draft reply to copy (collapsible,
+  copy button via a new myday.js). UI note: drafts are based only on subject/sender
+  (not the full content, data minimisation) and mark open spots with [...] — review
+  before sending. Anthropic timeout raised to 180s, max_tokens 16000.
+
 ## 1.2.2
 
 - **My Day**: each task now links directly to its source record (Odoo ticket or project
