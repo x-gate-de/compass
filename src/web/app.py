@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # Skript: src/web/app.py
 # Autor: Torben <github@x-gate.de>
-# Version: 1.7.4
+# Version: 1.7.5
 # Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 # Zweck:
 # - Vereinte compass-Web-UI (FastAPI): EIN Login (XMPP-Bind) und eine Navigations-Shell
@@ -56,7 +56,7 @@ _STATIC = os.path.join(_HERE, "static")
 
 # Wird auch als Cache-Buster fuer statische Assets genutzt (?v=...) ->
 # bei Aenderungen an style.css/theme.js/app.js/dashboard.js hochzaehlen.
-APP_VERSION = "1.4.15"
+APP_VERSION = "1.4.16"
 
 
 class NotAuthenticated(Exception):
@@ -992,7 +992,7 @@ def _register_routes(app):
         # beschneiden die Bildraender, sonst faellt z.B. das obere Laufband weg.
         "safe": {"0", "1", "2", "3", "4", "5"},
     }
-    _KIOSK_DEFAULT = {"theme": "dark", "accent": "green", "view": "signal", "lines": "1",
+    _KIOSK_DEFAULT = {"theme": "dark", "accent": "blue", "view": "signal", "lines": "1",
                       "cols": "auto", "r1": "3", "r2": "4", "r3": "6", "rn": "6", "max": "0",
                       "scale": "150", "safe": "3"}
 

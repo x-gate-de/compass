@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // Skript: src/web/static/theme.js
 // Autor: Torben <github@x-gate.de>
-// Version: 2.4.0
+// Version: 2.5.0
 // Lizenz: AGPL-3.0-or-later — siehe LICENSE.
 // Zweck:
 // - Setzt die Design-Einstellungen (Modus, Akzentfarbe, Ansicht, Dichte, Spalten,
@@ -17,7 +17,7 @@
 
 (function () {
   var KEYS = ["theme", "accent", "view", "density", "cols", "lines", "r1", "r2", "r3", "rn", "max"];
-  var DEFAULTS = { theme: "auto", accent: "blue", view: "signal", density: "comfortable",
+  var DEFAULTS = { theme: "dark", accent: "blue", view: "signal", density: "comfortable",
                    cols: "auto", lines: "1", r1: "1", r2: "2", r3: "3", rn: "4", max: "0" };
   // Erlaubte Boxen-Zahlen pro Reihe (muessen 12 teilen -> Reihe fuellt exakt die Breite).
   var ALLOWED = { 1: 12, 2: 6, 3: 4, 4: 3, 6: 2 };

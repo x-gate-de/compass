@@ -22,35 +22,37 @@
 }
 
 /* Dunkel-Modus (NOC): explizit gewaehlt ODER per System-Praeferenz. */
+/* Dunkelmodus: Palette der Leitstand-Anmutung (blau-schwarzer
+   Grund, kuehles Blaugrau, Blau als Akzent, Gruen/Amber/Rot als Ampel-Signale). */
 :root[data-theme="dark"] {
-  --bg: #06080b;
-  --card: #0c1218;
-  --ink: #cfdae5;
-  --ink-soft: #aab6c2;
-  --muted: #61707f;
-  --line: #1a232e;
-  --accent: #3fe07a;
-  --accent2: #4bc7f5;
-  --danger: #ff5470;
-  --ok: #3fe07a;
+  --bg: #0b0e13;
+  --card: #11161d;
+  --ink: #c9d4de;
+  --ink-soft: #97a6b4;
+  --muted: #5c6b7a;
+  --line: #1d2530;
+  --accent: #4da3ff;
+  --accent2: #3fd68f;
+  --danger: #e05d5d;
+  --ok: #3fd68f;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #06080b;
-    --card: #0c1218;
-    --ink: #cfdae5;
-    --ink-soft: #aab6c2;
-    --muted: #61707f;
-    --line: #1a232e;
-    --accent: #3fe07a;
-    --accent2: #4bc7f5;
-    --danger: #ff5470;
-    --ok: #3fe07a;
+    --bg: #0b0e13;
+    --card: #11161d;
+    --ink: #c9d4de;
+    --ink-soft: #97a6b4;
+    --muted: #5c6b7a;
+    --line: #1d2530;
+    --accent: #4da3ff;
+    --accent2: #3fd68f;
+    --danger: #e05d5d;
+    --ok: #3fd68f;
   }
 }
 
 /* Akzentfarben-Presets (ueberschreiben --accent unabhaengig vom Hell/Dunkel-Modus). */
-:root[data-accent="blue"]   { --accent: #2563eb; }
+:root[data-accent="blue"]   { --accent: #2b7fd9; }
 :root[data-accent="teal"]   { --accent: #0d9488; }
 :root[data-accent="green"]  { --accent: #1e7e45; }
 :root[data-accent="purple"] { --accent: #7c4dff; }
@@ -58,14 +60,14 @@
 :root[data-accent="red"]    { --accent: #c0392b; }
 
 /* Dunkelmodus: hellere Akzent-Varianten fuer ausreichenden Kontrast auf dunklem Grund. */
-:root[data-theme="dark"][data-accent="blue"]   { --accent: #5b9be3; }
+:root[data-theme="dark"][data-accent="blue"]   { --accent: #4da3ff; }
 :root[data-theme="dark"][data-accent="teal"]   { --accent: #2dd4bf; }
 :root[data-theme="dark"][data-accent="green"]  { --accent: #3fe07a; }
 :root[data-theme="dark"][data-accent="purple"] { --accent: #a78bfa; }
 :root[data-theme="dark"][data-accent="orange"] { --accent: #fb923c; }
 :root[data-theme="dark"][data-accent="red"]    { --accent: #f87171; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"])[data-accent="blue"]   { --accent: #5b9be3; }
+  :root:not([data-theme="light"])[data-accent="blue"]   { --accent: #4da3ff; }
   :root:not([data-theme="light"])[data-accent="teal"]   { --accent: #2dd4bf; }
   :root:not([data-theme="light"])[data-accent="green"]  { --accent: #3fe07a; }
   :root:not([data-theme="light"])[data-accent="purple"] { --accent: #a78bfa; }
@@ -77,7 +79,11 @@
 /* Das hidden-Attribut gewinnt IMMER — auch gegen display-Regeln von Klassen
    (verhindert die wiederkehrende Fehlerklasse "hidden wird ueberstimmt"). */
 [hidden] { display: none !important; }
-body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+/* Leitstand-Anmutung: durchgehend Monospace fuer den
+   Kontrollraum-Charakter; Ziffern laufen dadurch tabellarisch. */
+body { margin: 0;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 14px; line-height: 1.55;
   background: var(--bg); color: var(--ink); }
 
 /* Standard-Links nutzen die Akzentfarbe (statt Browser-Blau, das auf Dunkel schlecht lesbar ist). */
@@ -915,10 +921,10 @@ body.kiosk .ticker:first-child { border-top: 0; }
 /* --- NOC-Design: Terminal-Signaturen (nur Dunkelmodus) ----------------------- */
 /* Feine Scanline ueber dem Grund — sehr dezent, gibt der Datenwand Textur. */
 :root[data-theme="dark"] body {
-  background-image: repeating-linear-gradient(0deg, rgba(63,224,122,.015) 0 1px, transparent 1px 3px); }
+  background-image: repeating-linear-gradient(0deg, rgba(77,163,255,.02) 0 1px, transparent 1px 3px); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) body {
-    background-image: repeating-linear-gradient(0deg, rgba(63,224,122,.015) 0 1px, transparent 1px 3px); }
+    background-image: repeating-linear-gradient(0deg, rgba(77,163,255,.02) 0 1px, transparent 1px 3px); }
 }
 /* Engere Radien (Terminal-Kante). */
 :root[data-theme="dark"] .item { border-radius: 4px; }

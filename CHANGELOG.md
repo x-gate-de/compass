@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+- **Design**: switched to a "control room" look — monospace throughout, a blue-black
+  palette (ground #0b0e13, panel #11161d, lines #1d2530, text #c9d4de), blue #4da3ff as
+  the accent (instead of phosphor green), green/amber/red as traffic-light signals. The
+  default mode is now "dark" and the default accent "blue"; the scanline is a subtle
+  blue. The light mode stays as a calm twin. If another accent is still stored, pick
+  "blue" in the gear menu.
+
 ## 1.2.6
 
 - **My Day**: removed the recommended action and the draft reply/note per task again
